@@ -47,3 +47,10 @@ struct UserNoteFields {
     pub image: String,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum Params {
+    UpdateNoteParams(UpdateNoteParams),
+    FindNotesParams(FindNotesParams),
+}
+
