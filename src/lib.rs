@@ -37,3 +37,24 @@ impl Default for AnkiClient {
     }
 }
 
+impl AnkiClient {
+    /// Creates a new `AnkiClient` with the specified port and version.
+    ///
+    /// # Parameters
+    ///
+    /// * `port`: The port where AnkiConnect is running. 
+    /// * `version`: The version of the AnkiConnect plugin.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let client = AnkiClient::new("8765", 6);
+    /// ```
+    fn new(port: &str, version: u8) -> Self {
+        Self {
+            endpoint: format!("http://{}", port),
+            client: Client::new(),
+            version,
+        }
+    }
+
