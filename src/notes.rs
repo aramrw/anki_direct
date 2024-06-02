@@ -61,3 +61,20 @@ pub struct NoteAction {
     params: Params,
 }
 
+impl NoteAction {
+    pub async fn find_note_ids(
+        anki_client: &AnkiClient,
+        query: &str,
+    ) -> Result<Option<Vec<u64>>, String> {
+        let payload = NoteAction {
+            action: "findNotes".to_string(),
+            version: anki_client.version,
+            params: Params::FindNotesParams(FindNotesParams {
+                query: query.to_string(),
+            }),
+        };
+
+        post_request(payload, &anki_client.endpoint, &anki_client.client).await
+    }
+}
+
