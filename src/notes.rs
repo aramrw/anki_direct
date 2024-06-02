@@ -33,3 +33,9 @@ struct FindNotesParams {
 }
 
 
+// other
+#[derive(Serialize, Deserialize)]
+struct ConfigJson {
+    fields: UserNoteFields,
+}
+
