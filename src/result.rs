@@ -19,3 +19,15 @@ pub struct NumVecRes {
     error: Option<String>,
 }
 
+impl NumVecRes {
+    pub fn into_result(self) -> Result<Option<Vec<u64>>, String> {
+        match self.error {
+            Some(err) => Err(err),
+            None => match self.result {
+                Some(vec) if vec.is_empty() => Ok(None),
+                Some(vec) => Ok(Some(vec)),
+                None => Ok(None),
+            },
+        }
+    }
+}
