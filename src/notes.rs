@@ -78,3 +78,25 @@ impl NoteAction {
     }
 }
 
+async fn post_request(
+    payload: NoteAction,
+    endpoint: &str,
+    client: &Client,
+) -> Result<Option<Vec<u64>>, String> {
+    let res: Result<NumVecRes, String> = client
+        .post(endpoint)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format_error("Find Notes -> Network Err", e.to_string()))?
+        .json()
+        .await
+        .map_err(|e| format_error("Find Notes -> Network Err", e.to_string()))?;
+
+    let res = match res {
+        Ok(res) => res,
+        Err(err) => return Err(format_error("Find Notes -> Network Err", err.to_string())),
+    };
+
+    res.into_result()
+}
