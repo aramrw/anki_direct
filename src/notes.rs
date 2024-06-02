@@ -27,3 +27,9 @@ struct UpdateNoteParams {
     note: Note,
 }
 
+#[derive(Serialize, Deserialize)]
+struct FindNotesParams {
+    query: String,
+}
+
+
