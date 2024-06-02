@@ -54,3 +54,10 @@ enum Params {
     FindNotesParams(FindNotesParams),
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct NoteAction {
+    action: String,
+    version: u8,
+    params: Params,
+}
+
