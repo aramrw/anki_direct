@@ -58,3 +58,19 @@ impl AnkiClient {
         }
     }
 
+    /// Formats the URL from the provided port.
+    ///
+    /// # Parameters
+    ///
+    /// * `port`: The port where AnkiConnect is running.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let url = client.format_url("8765");
+    /// ```
+    fn format_url(&self, port: &str) -> String {
+        format!("http://localhost:{}", port)
+    }
+
+}
