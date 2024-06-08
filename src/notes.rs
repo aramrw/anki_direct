@@ -1,6 +1,8 @@
 #![allow(non_snake_case)]
 use crate::error::format_error;
 use crate::result::NumVecRes;
+use crate::error::{format_error, AnkiError};
+use crate::result::{NotesInfoData, NotesInfoRes, NumVecRes};
 use crate::AnkiClient;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -32,6 +34,10 @@ struct FindNotesParams {
     query: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct NotesInfoParams {
+    notes: Vec<u64>,
+}
 
 // other
 #[derive(Serialize, Deserialize)]
