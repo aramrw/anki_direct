@@ -74,12 +74,27 @@ impl NoteAction {
         let payload = NoteAction {
             action: "findNotes".to_string(),
             version: anki_client.version,
-            params: Params::FindNotesParams(FindNotesParams {
+            params: Params::FindNotes(FindNotesParams {
                 query: query.to_string(),
             }),
         };
 
-        post_request(payload, &anki_client.endpoint, &anki_client.client).await
+        post_find_note_ids_req(payload, &anki_client.endpoint, &anki_client.client).await
+    }
+
+    pub async fn get_notes_infos(
+        anki_client: &AnkiClient,
+        ids: Vec<u64>,
+    ) -> Result<Vec<NotesInfoData>, AnkiError> {
+        let payload = NoteAction {
+            action: "notesInfo".to_string(),
+            version: anki_client.version,
+            params: Params::NotesInfo(NotesInfoParams { notes: ids }),
+        };
+
+        post_get_notes_infos_req(payload, &anki_client.endpoint, &anki_client.client).await
+    }
+}
 
 async fn post_get_notes_infos_req(
     payload: NoteAction,
