@@ -21,6 +21,13 @@ pub struct NumVecRes {
     pub error: Option<String>,
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NotesInfoRes {
+   pub result: Option<Vec<NotesInfoData>>,
+   pub error: Option<String>,
+}
+
 }
 
 impl NumVecRes {
