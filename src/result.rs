@@ -17,6 +17,10 @@ use std::collections::HashMap;
 pub struct NumVecRes {
     result: Option<Vec<u64>>,
     error: Option<String>,
+    pub result: Option<Vec<u64>>,
+    pub error: Option<String>,
+}
+
 }
 
 impl NumVecRes {
