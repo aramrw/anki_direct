@@ -23,6 +23,14 @@ pub struct NumVecRes {
 
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct NotesInfoData {
+   pub noteId: u64,
+   pub modelName: String,
+   pub tags: Vec<String>,
+   pub fields: HashMap<String, FieldData>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NotesInfoRes {
    pub result: Option<Vec<NotesInfoData>>,
    pub error: Option<String>,
