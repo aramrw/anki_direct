@@ -1,6 +1,4 @@
 #![allow(non_snake_case)]
-use crate::error::format_error;
-use crate::result::NumVecRes;
 use crate::error::{format_error, AnkiError};
 use crate::result::{NotesInfoData, NotesInfoRes, NumVecRes};
 use crate::AnkiClient;
