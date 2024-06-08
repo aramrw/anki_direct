@@ -56,12 +56,13 @@ impl NotesInfoRes {
 
 impl NumVecRes {
     pub fn into_result(self) -> Result<Option<Vec<u64>>, String> {
+    pub fn into_result(self) -> Result<Vec<u64>, AnkiError> {
         match self.error {
-            Some(err) => Err(err),
+            Some(e) => Err(AnkiError::RequestError(e)),
             None => match self.result {
-                Some(vec) if vec.is_empty() => Ok(None),
-                Some(vec) => Ok(Some(vec)),
-                None => Ok(None),
+                Some(vec) if vec.is_empty() => Err(AnkiError::NoDataFound),
+                Some(vec) => Ok(vec),
+                None => Err(AnkiError::NoDataFound),
             },
         }
     }
