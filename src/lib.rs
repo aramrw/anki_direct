@@ -1,5 +1,5 @@
-mod notes;
-mod result;
+pub mod notes;
+pub mod result;
 mod error;
 mod test;
 
