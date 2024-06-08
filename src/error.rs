@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::fmt::Display;
 //use std::collections::HashMap;
 
@@ -9,6 +10,8 @@ pub enum AnkiError {
     RequestError(String),
     ParseError(String),
 }
+
+impl Error for AnkiError {}
 
 impl Display for AnkiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
