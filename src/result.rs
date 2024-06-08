@@ -21,6 +21,11 @@ pub struct NumVecRes {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FieldData {
+   pub value: String,
+   pub order: u8,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NotesInfoData {
