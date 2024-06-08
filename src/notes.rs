@@ -56,8 +56,9 @@ struct UserNoteFields {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum Params {
-    UpdateNoteParams(UpdateNoteParams),
-    FindNotesParams(FindNotesParams),
+    UpdateNote(UpdateNoteParams),
+    FindNotes(FindNotesParams),
+    NotesInfo(NotesInfoParams),
 }
 
 #[derive(Serialize, Deserialize)]
