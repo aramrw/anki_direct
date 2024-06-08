@@ -1,7 +1,12 @@
 [package]
 name = "anki_direct"
 version = "0.1.0"
-edition = "2021"
+authors = ["aramrw <aramitsa@gmail.com>"]
+description = "A Simple Rust library for AnkiConnect API"
+license = "MIT"
+documentation = "https://docs.rs/anki_direct"
+homepage = "https://github.com/yourusername/anki_direct"
+repository = "https://github.com/yourusername/anki_direct"
 
 [dependencies]
 serde={ version="1.0", features=["derive"]}
