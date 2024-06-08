@@ -70,7 +70,7 @@ impl NoteAction {
     pub async fn find_note_ids(
         anki_client: &AnkiClient,
         query: &str,
-    ) -> Result<Option<Vec<u64>>, String> {
+    ) -> Result<Vec<u64>, AnkiError> {
         let payload = NoteAction {
             action: "findNotes".to_string(),
             version: anki_client.version,
@@ -83,25 +83,20 @@ impl NoteAction {
     }
 }
 
-async fn post_request(
+async fn post_find_note_ids_req(
     payload: NoteAction,
     endpoint: &str,
     client: &Client,
-) -> Result<Option<Vec<u64>>, String> {
-    let res: Result<NumVecRes, String> = client
-        .post(endpoint)
-        .json(&payload)
-        .send()
-        .await
-        .map_err(|e| format_error("Find Notes -> Network Err", e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| format_error("Find Notes -> Network Err", e.to_string()))?;
-
-    let res = match res {
-        Ok(res) => res,
-        Err(err) => return Err(format_error("Find Notes -> Network Err", err.to_string())),
+) -> Result<Vec<u64>, AnkiError> {
+    let res = match client.post(endpoint).json(&payload).send().await {
+        Ok(response) => response,
+        Err(e) => return Err(AnkiError::RequestError(e.to_string())),
     };
 
-    res.into_result()
+    let body: Result<NumVecRes, reqwest::Error> = res.json().await;
+
+    match body {
+        Ok(res) => res.into_result(),
+        Err(e) => Err(AnkiError::ParseError(e.to_string())),
+    }
 }
