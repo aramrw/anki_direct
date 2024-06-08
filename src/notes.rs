@@ -7,44 +7,44 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
-struct Note {
-    id: u64,
-    fields: HashMap<String, String>,
-    audio: Vec<Media>,
-    picture: Option<Vec<Media>>,
+pub struct Note {
+    pub id: u64,
+    pub fields: HashMap<String, String>,
+    pub audio: Vec<Media>,
+    pub picture: Option<Vec<Media>>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct Media {
-    url: String,
-    filename: String,
-    skipHash: Option<String>,
-    fields: Vec<String>,
+pub struct Media {
+    pub url: String,
+    pub filename: String,
+    pub skipHash: Option<String>,
+    pub fields: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct UpdateNoteParams {
-    note: Note,
+pub struct UpdateNoteParams {
+    pub note: Note,
 }
 
 #[derive(Serialize, Deserialize)]
-struct FindNotesParams {
-    query: String,
+pub struct FindNotesParams {
+    pub query: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct NotesInfoParams {
-    notes: Vec<u64>,
+pub struct NotesInfoParams {
+    pub notes: Vec<u64>,
 }
 
 // other
 #[derive(Serialize, Deserialize)]
-struct ConfigJson {
-    fields: UserNoteFields,
+pub struct ConfigJson {
+    pub fields: UserNoteFields,
 }
 
 #[derive(Serialize, Deserialize)]
-struct UserNoteFields {
+pub struct UserNoteFields {
     pub expression: String,
     pub sentence: String,
     pub sentence_audio: String,
@@ -53,7 +53,7 @@ struct UserNoteFields {
 
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
-enum Params {
+pub enum Params {
     UpdateNote(UpdateNoteParams),
     FindNotes(FindNotesParams),
     NotesInfo(NotesInfoParams),
@@ -61,9 +61,9 @@ enum Params {
 
 #[derive(Serialize, Deserialize)]
 pub struct NoteAction {
-    action: String,
-    version: u8,
-    params: Params,
+    pub action: String,
+    pub version: u8,
+    pub params: Params,
 }
 
 impl NoteAction {
