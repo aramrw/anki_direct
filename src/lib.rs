@@ -11,10 +11,10 @@ use reqwest::Client;
 /// - `endpoint`: The endpoint where AnkiConnect is running. Defaults to `http://localhost:8765`.
 /// - `client`: The HTTP client used to send requests.
 /// - `version`: The version of the AnkiConnect plugin. Defaults to `6`.
-pub(crate) struct AnkiClient {
-    endpoint: String,
-    client: Client,
-    version: u8,
+pub struct AnkiClient {
+    pub endpoint: String,
+    pub client: Client,
+    pub version: u8,
 }
 
 impl Default for AnkiClient {
@@ -50,7 +50,7 @@ impl AnkiClient {
     /// ```
     /// let client = AnkiClient::new("8765", 6);
     /// ```
-    fn new(port: &str, version: u8) -> Self {
+    pub fn new(port: &str, version: u8) -> Self {
         Self {
             endpoint: format!("http://{}", port),
             client: Client::new(),
@@ -69,7 +69,7 @@ impl AnkiClient {
     /// ```
     /// let url = client.format_url("8765");
     /// ```
-    fn format_url(&self, port: &str) -> String {
+    pub fn format_url(&self, port: &str) -> String {
         format!("http://localhost:{}", port)
     }
 
