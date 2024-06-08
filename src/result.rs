@@ -41,6 +41,17 @@ pub struct NotesInfoRes {
    pub error: Option<String>,
 }
 
+impl NotesInfoRes {
+    pub fn into_result(self) -> Result<Vec<NotesInfoData>, AnkiError> {
+        match self.error {
+            Some(e) => Err(AnkiError::RequestError(e)),
+            None => match self.result {
+                Some(vec) if vec.is_empty() => Err(AnkiError::NoDataFound),
+                Some(vec) => Ok(vec),
+                None => Err(AnkiError::NoDataFound),
+            },
+        }
+    }
 }
 
 impl NumVecRes {
