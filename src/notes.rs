@@ -80,6 +80,22 @@ impl NoteAction {
         };
 
         post_request(payload, &anki_client.endpoint, &anki_client.client).await
+
+async fn post_get_notes_infos_req(
+    payload: NoteAction,
+    endpoint: &str,
+    client: &Client,
+) -> Result<Vec<NotesInfoData>, AnkiError> {
+    let res = match client.post(endpoint).json(&payload).send().await {
+        Ok(response) => response,
+        Err(e) => return Err(AnkiError::RequestError(e.to_string())),
+    };
+
+    let body: Result<NotesInfoRes, reqwest::Error> = res.json().await;
+
+    match body {
+        Ok(res) => res.into_result(),
+        Err(e) => Err(AnkiError::ParseError(e.to_string())),
     }
 }
 
