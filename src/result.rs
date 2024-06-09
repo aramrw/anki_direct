@@ -15,28 +15,28 @@ use std::collections::HashMap;
 /// - FindNotes
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NumVecRes {
-    pub result: Option<Vec<u64>>,
+    pub result: Option<Vec<u128>>,
     pub error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FieldData {
-   pub value: String,
-   pub order: u8,
+    pub value: String,
+    pub order: u8,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NotesInfoData {
-   pub noteId: u64,
-   pub modelName: String,
-   pub tags: Vec<String>,
-   pub fields: HashMap<String, FieldData>,
+    pub noteId: u128,
+    pub modelName: String,
+    pub tags: Vec<String>,
+    pub fields: HashMap<String, FieldData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NotesInfoRes {
-   pub result: Option<Vec<NotesInfoData>>,
-   pub error: Option<String>,
+    pub result: Option<Vec<NotesInfoData>>,
+    pub error: Option<String>,
 }
 
 impl NotesInfoRes {
@@ -53,7 +53,7 @@ impl NotesInfoRes {
 }
 
 impl NumVecRes {
-    pub fn into_result(self) -> Result<Vec<u64>, AnkiError> {
+    pub fn into_result(self) -> Result<Vec<u128>, AnkiError> {
         match self.error {
             Some(e) => Err(AnkiError::RequestError(e)),
             None => match self.result {

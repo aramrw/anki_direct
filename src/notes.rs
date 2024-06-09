@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use crate::error::{format_error, AnkiError};
+use crate::error::AnkiError;
 use crate::result::{NotesInfoData, NotesInfoRes, NumVecRes};
 use crate::AnkiClient;
 use reqwest::Client;
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
 pub struct Note {
-    pub id: u64,
+    pub id: u128,
     pub fields: HashMap<String, String>,
     pub audio: Vec<Media>,
     pub picture: Option<Vec<Media>>,
@@ -34,7 +34,7 @@ pub struct FindNotesParams {
 
 #[derive(Serialize, Deserialize)]
 pub struct NotesInfoParams {
-    pub notes: Vec<u64>,
+    pub notes: Vec<u128>,
 }
 
 // other
@@ -70,7 +70,7 @@ impl NoteAction {
     pub async fn find_note_ids(
         anki_client: &AnkiClient,
         query: &str,
-    ) -> Result<Vec<u64>, AnkiError> {
+    ) -> Result<Vec<u128>, AnkiError> {
         let payload = NoteAction {
             action: "findNotes".to_string(),
             version: anki_client.version,
@@ -84,7 +84,7 @@ impl NoteAction {
 
     pub async fn get_notes_infos(
         anki_client: &AnkiClient,
-        ids: Vec<u64>,
+        ids: Vec<u128>,
     ) -> Result<Vec<NotesInfoData>, AnkiError> {
         let payload = NoteAction {
             action: "notesInfo".to_string(),
@@ -118,7 +118,7 @@ async fn post_find_note_ids_req(
     payload: NoteAction,
     endpoint: &str,
     client: &Client,
-) -> Result<Vec<u64>, AnkiError> {
+) -> Result<Vec<u128>, AnkiError> {
     let res = match client.post(endpoint).json(&payload).send().await {
         Ok(response) => response,
         Err(e) => return Err(AnkiError::RequestError(e.to_string())),
