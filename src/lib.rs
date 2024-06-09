@@ -1,6 +1,6 @@
 pub mod notes;
 pub mod result;
-mod error;
+pub mod error;
 mod test;
 
 use reqwest::Client;
