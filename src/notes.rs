@@ -94,6 +94,10 @@ impl NoteAction {
 
         post_get_notes_infos_req(payload, &anki_client.endpoint, &anki_client.client).await
     }
+
+    pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) {
+
+    }
 }
 
 async fn post_get_notes_infos_req(
