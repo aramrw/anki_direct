@@ -39,6 +39,12 @@ pub struct NotesInfoRes {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NotesGuiEditRes {
+    pub result: Option<String>,
+    pub error: Option<String>,
+}
+
 impl NotesInfoRes {
     pub fn into_result(self) -> Result<Vec<NotesInfoData>, AnkiError> {
         match self.error {
