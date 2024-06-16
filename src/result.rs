@@ -40,9 +40,18 @@ pub struct NotesInfoRes {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NotesGuiEditRes {
+pub struct NoteGuiEditRes {
     pub result: Option<String>,
     pub error: Option<String>,
+}
+
+impl NoteGuiEditRes {
+    pub fn into_result(self) -> Result<(), AnkiError> {
+        match self.error {
+            Some(e) => Err(AnkiError::RequestError(e)),
+            None => Ok(()),
+        }
+    }
 }
 
 impl NotesInfoRes {
