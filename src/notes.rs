@@ -90,7 +90,7 @@ impl NoteAction {
 
     pub async fn get_notes_infos(
         anki_client: &AnkiClient,
-        ids: Vec<u128>,
+        ids: &Vec<u128>,
     ) -> Result<Vec<NotesInfoData>, AnkiError> {
         let payload = NoteAction {
             action: "notesInfo".to_string(),
