@@ -22,6 +22,12 @@ pub struct Media {
     pub fields: Vec<String>,
 }
 
+
+#[derive(Serialize, Deserialize)]
+pub struct GuiEditNoteParams {
+    pub note: u128
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct UpdateNoteParams {
     pub note: Note,
@@ -57,6 +63,7 @@ pub enum Params {
     UpdateNote(UpdateNoteParams),
     FindNotes(FindNotesParams),
     NotesInfo(NotesInfoParams),
+    GuiEditNote(GuiEditNoteParams),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -96,7 +103,13 @@ impl NoteAction {
     }
 
     pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) {
-
+        let payload = NoteAction {
+            action: "guiEditNote",
+            version: 6,
+            params: {
+                )
+            }
+        }
     }
 }
 
