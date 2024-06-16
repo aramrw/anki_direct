@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use crate::error::AnkiError;
-use crate::result::{NotesInfoData, NotesInfoRes, NumVecRes};
+use crate::result::{NoteGuiEditRes, NotesInfoData, NotesInfoRes, NumVecRes};
 use crate::AnkiClient;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -22,10 +22,9 @@ pub struct Media {
     pub fields: Vec<String>,
 }
 
-
 #[derive(Serialize, Deserialize)]
 pub struct GuiEditNoteParams {
-    pub note: u128
+    pub note: u128,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,7 +101,6 @@ impl NoteAction {
         post_get_notes_infos_req(payload, &anki_client.endpoint, &anki_client.client).await
     }
 
-    pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) {
     pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) -> Result<(), AnkiError> {
         let payload = NoteAction {
             action: "guiEditNote".to_string(),
@@ -110,6 +108,25 @@ impl NoteAction {
             params: { Params::GuiEditNote(GuiEditNoteParams { note: id }) },
         };
 
+        post_gui_edit_note_req(payload, &anki_client.endpoint, &anki_client.client).await
+    }
+}
+
+async fn post_gui_edit_note_req(
+    payload: NoteAction,
+    endpoint: &str,
+    client: &Client,
+) -> Result<(), AnkiError> {
+    let res = match client.post(endpoint).json(&payload).send().await {
+        Ok(response) => response,
+        Err(e) => return Err(AnkiError::RequestError(e.to_string())),
+    };
+
+    let body: Result<NoteGuiEditRes, reqwest::Error> = res.json().await;
+
+    match body {
+        Ok(res) => res.into_result(),
+        Err(e) => Err(AnkiError::ParseError(e.to_string())),
     }
 }
 
