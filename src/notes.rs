@@ -103,13 +103,13 @@ impl NoteAction {
     }
 
     pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) {
+    pub async fn gui_edit_note(anki_client: &AnkiClient, id: u128) -> Result<(), AnkiError> {
         let payload = NoteAction {
-            action: "guiEditNote",
+            action: "guiEditNote".to_string(),
             version: 6,
-            params: {
-                )
-            }
-        }
+            params: { Params::GuiEditNote(GuiEditNoteParams { note: id }) },
+        };
+
     }
 }
 
