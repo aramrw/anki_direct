@@ -1,6 +1,6 @@
+pub mod error;
 pub mod notes;
 pub mod result;
-pub mod error;
 mod test;
 
 use reqwest::Client;
@@ -11,6 +11,7 @@ use reqwest::Client;
 /// - `endpoint`: The endpoint where AnkiConnect is running. Defaults to `http://localhost:8765`.
 /// - `client`: The HTTP client used to send requests.
 /// - `version`: The version of the AnkiConnect plugin. Defaults to `6`.
+#[derive(Clone, Debug)]
 pub struct AnkiClient {
     pub endpoint: String,
     pub client: Client,
@@ -42,7 +43,7 @@ impl AnkiClient {
     ///
     /// # Parameters
     ///
-    /// * `port`: The port where AnkiConnect is running. 
+    /// * `port`: The port where AnkiConnect is running.
     /// * `version`: The version of the AnkiConnect plugin.
     ///
     /// # Example
@@ -72,5 +73,4 @@ impl AnkiClient {
     pub fn format_url(&self, port: &str) -> String {
         format!("http://localhost:{}", port)
     }
-
 }
