@@ -17,12 +17,12 @@ impl Display for AnkiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AnkiError::NoDataFound => write!(f, "No data found for query."),
-            AnkiError::RequestError(e) => write!(f, "Request error: {}", e),
-            AnkiError::ParseError(e) => write!(f, "Parse error: {}", e),
+            AnkiError::RequestError(e) => write!(f, "Request error: {e}"),
+            AnkiError::ParseError(e) => write!(f, "Parse error: {e}"),
         }
     }
 }
 
 pub fn format_error(title: &str, error: String) -> String {
-    format!("{}: {}", title, error)
+    format!("{title}: {error}")
 }

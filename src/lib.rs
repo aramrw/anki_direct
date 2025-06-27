@@ -1,3 +1,4 @@
+#[deny(missing_docs)]
 pub mod error;
 pub mod notes;
 pub mod result;
@@ -22,6 +23,7 @@ impl Default for AnkiClient {
     /// Creates a new `AnkiClient` with default values.
     /// * `port`: The port where AnkiConnect is running. Defaults to `8765`.
     /// * `version`: The version of the AnkiConnect plugin. Defaults to `6`.
+    ///
     /// To change these defaults, use `Ankiclient::new()` instead;
     ///
     /// # Example
@@ -53,7 +55,7 @@ impl AnkiClient {
     /// ```
     pub fn new(port: &str, version: u8) -> Self {
         Self {
-            endpoint: format!("http://{}", port),
+            endpoint: format!("http://{port}"),
             client: Client::new(),
             version,
         }
@@ -71,6 +73,6 @@ impl AnkiClient {
     /// let url = client.format_url("8765");
     /// ```
     pub fn format_url(&self, port: &str) -> String {
-        format!("http://localhost:{}", port)
+        format!("http://localhost:{port}")
     }
 }
