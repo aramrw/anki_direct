@@ -1,9 +1,6 @@
-use std::{
-    fmt::{Debug, Display},
-    mem::take,
-};
+use std::fmt::{Debug, Display};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 
 use crate::str_utils::camel_case_split;
 
@@ -55,18 +52,4 @@ fn fmt_default_search_query(
 pub trait AnkiConnectResult<T: DeserializeOwned> {
     fn result(&mut self) -> T;
     fn error(&mut self) -> Option<String>;
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct GenericResult<T> {
-    pub result: T,
-    pub error: Option<String>,
-}
-impl<T: DeserializeOwned + Default> AnkiConnectResult<T> for GenericResult<T> {
-    fn result(&mut self) -> T {
-        take(&mut self.result)
-    }
-    fn error(&mut self) -> Option<String> {
-        take(&mut self.error)
-    }
 }

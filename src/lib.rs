@@ -1,10 +1,11 @@
 pub mod anki;
 pub mod error;
+mod model;
 pub mod notes;
 pub mod result;
 mod str_utils;
-mod test;
 mod test_utils;
+mod generic;
 
 use std::ops::Deref;
 
@@ -125,7 +126,7 @@ impl AnkiClient {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Number(isize);
 impl Number {
     pub fn new(int: impl PrimInt) -> Self {

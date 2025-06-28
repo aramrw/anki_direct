@@ -64,7 +64,7 @@ fn unspecified(v: Option<String>) -> String {
 impl AnkiError {
     #[inline(always)]
     #[track_caller]
-    pub fn pretty_panic(&self, file: &'static str, line: u32) -> ! {
-        panic!("[{file}::<{line}>](PANIC)\n {self}")
+    pub fn pretty_panic(&self) -> ! {
+        panic!("<PANIC>\n {self}")
     }
 }
