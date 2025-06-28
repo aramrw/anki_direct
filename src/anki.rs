@@ -4,15 +4,22 @@ use serde::de::DeserializeOwned;
 
 use crate::str_utils::camel_case_split;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum AnkiQuery {
     CardState(CardState),
+    Custom(String),
 }
 impl Display for AnkiQuery {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::CardState(state) => Display::fmt(state, f),
+            Self::Custom(str) => Display::fmt(str, f),
         }
+    }
+}
+impl From<&str> for AnkiQuery {
+    fn from(value: &str) -> Self {
+       AnkiQuery::Custom(value.to_string()) 
     }
 }
 
@@ -33,7 +40,7 @@ impl Display for CardState {
 }
 
 /// [Display::fmt] Helper for anki queries that can be guessed from the variant name:
-/// ```
+/// ```no_run
 /// IsNew -> "is:new"
 /// ```
 fn fmt_default_search_query(

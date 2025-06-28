@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use crate::AnkiClient;
 
-pub static ANKICLIENT: LazyLock<AnkiClient> = LazyLock::new(AnkiClient::default_latest_sync);
+pub static ANKICLIENT: LazyLock<AnkiClient> = LazyLock::new(|| AnkiClient::default());
 
 pub(crate) fn display_type<T>() -> String {
     std::any::type_name::<T>().to_string()

@@ -1,35 +1,135 @@
+#![allow(clippy::needless_doctest_main)]
+
 pub mod anki;
+#[cfg(feature = "cache")]
+mod cache;
 pub mod error;
+mod generic;
 mod model;
 pub mod notes;
 pub mod result;
 mod str_utils;
 mod test_utils;
-mod generic;
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
+#[cfg(feature = "cache")]
+use cache::Cache;
 use error::{AnkiError, CustomSerdeError};
 use num_traits::PrimInt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// `AnkiClient` is a struct that allows you to communicate with the AnkiConnect API.
+#[derive(Clone, Debug)]
+struct AnkiClient {
+    backend: Arc<Backend>,
+    modules: Arc<AnkiModules>,
+    #[cfg(feature = "cache")]
+    cache: Cache,
+}
+impl AnkiClient {
+    pub fn notes(&self) -> &NotesProxy {
+        &self.modules.notes
+    }
+    pub fn models(&self) -> &ModelsProxy {
+        &self.modules.models
+    }
+    /// Returns a reference to a reqwest client if needed.
+    pub fn reqwest_client(&self) -> &Client {
+        &self.backend.client
+    }
+}
+
+#[derive(Clone, Debug)]
+struct AnkiModules {
+    backend: Arc<Backend>,
+    notes: NotesProxy,
+    models: ModelsProxy,
+}
+impl AnkiModules {
+    fn new(backend: Arc<Backend>) -> Self {
+        Self {
+            backend: backend.clone(),
+            notes: NotesProxy(backend.clone()),
+            models: ModelsProxy(backend.clone()),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct NotesProxy(Arc<Backend>);
+impl Deref for NotesProxy {
+    type Target = Arc<Backend>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[derive(Clone, Debug)]
+struct ModelsProxy(Arc<Backend>);
+impl Deref for ModelsProxy {
+    type Target = Arc<Backend>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Default for AnkiClient {
+    fn default() -> Self {
+        let backend = Arc::new(Backend::default());
+        let modules = Arc::new(AnkiModules::new(backend.clone()));
+        Self {
+            backend: backend.clone(),
+            modules: modules.clone(),
+            #[cfg(feature = "cache")]
+            cache: Cache::init(modules.clone()),
+        }
+    }
+}
+impl Deref for AnkiClient {
+    type Target = Arc<Backend>;
+    fn deref(&self) -> &Self::Target {
+        &self.backend
+    }
+}
+
+#[cfg(feature = "cache")]
+impl AnkiClient {
+    fn cache(&self) -> &Cache {
+        &self.cache
+    }
+}
+
+/// `Backend` is a struct that allows you to communicate with the AnkiConnect API.
 ///
 /// It contains the following fields:
 /// - `endpoint`: The endpoint where AnkiConnect is running. Defaults to `http://localhost:8765`.
 /// - `client`: The HTTP client used to send requests.
 /// - `version`: The version of the AnkiConnect plugin. Defaults to `6`.
 #[derive(Clone, Debug)]
-pub struct AnkiClient {
+pub struct Backend {
     pub endpoint: String,
     pub client: Client,
     pub version: u8,
 }
 
-impl AnkiClient {
-    /// Creates a new `AnkiClient` with the specified port.
+impl Default for Backend {
+    /// Sync fn that is the same as [Self::default_auto()]
+    /// except it also hardcodes the version as 6.
+    ///
+    /// `Note`: Not `async` because it doesn't check versions or make requests,
+    /// so the first query could error if ankiconnect is not open, or the version is not `6`.
+    fn default() -> Self {
+        Self {
+            endpoint: Self::format_url("8765"),
+            client: Client::new(),
+            version: 6,
+        }
+    }
+}
+
+impl Backend {
+    /// Creates a new `Backend` with the specified port.
     /// Returns an `Err(`[AnkiError::ConnectionNotFound]`)` if anki isn't open.
     ///
     /// # Parameters
@@ -38,14 +138,14 @@ impl AnkiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// // ankiconnect's default is "8765"
-    /// let client = AnkiClient::new("8765");
+    /// let client = Backend::new("8765");
     /// ```
     pub async fn new(port: &str) -> Result<Self, AnkiError> {
         let client = Client::new();
         let endpoint = Self::format_url(port);
-        let version = AnkiClient::get_version_internal(&client, &endpoint).await?;
+        let version = Backend::get_version_internal(&client, &endpoint).await?;
         let ac = Self {
             endpoint,
             client,
@@ -54,30 +154,18 @@ impl AnkiClient {
         Ok(ac)
     }
 
-    /// Creates a new `AnkiClient` with a port of "8765".
+    /// Creates a new `Backend` with a port of "8765".
     /// This is the same as calling:
     /// ```
-    /// let client = AnkiClient::new("8765");
+    /// let client = Backend::new("8765");
     /// ```
-    pub async fn default() -> Result<Self, AnkiError> {
+    pub async fn default_auto() -> Result<Self, AnkiError> {
         Self::new("8765").await
-    }
-
-    /// Sync fn that is the same as [Self::default()], except it also hardcodes the version as 6.
-    ///
-    /// `Note`: Not `async` because Doesn't check versions or make requests,
-    /// so the first query could error if ankiconnect is not open, or the version is not `6`.
-    pub fn default_latest_sync() -> Self {
-        Self {
-            endpoint: Self::format_url("8765"),
-            client: Client::new(),
-            version: 6,
-        }
     }
 
     /// This fn is not `async` so you can initialize it in statics.
     ///
-    /// `Note`: Not `async` because Doesn't check versions or make requests,
+    /// `Note`: Not `async` because it doesn't check versions or make requests,
     /// so the first query could error if ankiconnect is not open, or the version is not correct.
     pub fn new_sync(port: &str, version: u8) -> Self {
         Self {
@@ -101,6 +189,7 @@ impl AnkiClient {
     pub fn format_url(port: &str) -> String {
         format!("http://localhost:{port}")
     }
+
     /// makes a get request to ankiconnect to get its version
     pub async fn get_version_internal(c: &Client, url: &str) -> Result<u8, AnkiError> {
         let res = match c.get(url).send().await {

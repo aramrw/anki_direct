@@ -4,6 +4,41 @@ use std::fmt::Debug;
 use serde_json::Value;
 use thiserror::Error;
 
+use crate::{
+    generic::GenericRequestBuilderError,
+    notes::{MediaBuilderError, NoteBuilderError},
+};
+
+pub type AnkiResult<T> = Result<T, AnkiError>;
+
+#[derive(Debug, Error)]
+pub enum BuilderErrors {
+    #[error("[error/media_builder] missing either one of Url/Path/Data variants for an AnkiMedia type for filename: {0}")]
+    MissingMedia(String),
+    #[error("{0}")]
+    GenericRequest(#[from] GenericRequestBuilderError),
+    #[error("{0}")]
+    Note(#[from] NoteBuilderError),
+    #[error("{0}")]
+    Media(#[from] MediaBuilderError),
+}
+
+impl From<GenericRequestBuilderError> for AnkiError {
+    fn from(value: GenericRequestBuilderError) -> Self {
+        Self::Builder(BuilderErrors::GenericRequest(value))
+    }
+}
+impl From<NoteBuilderError> for AnkiError {
+    fn from(value: NoteBuilderError) -> Self {
+        Self::Builder(BuilderErrors::Note(value))
+    }
+}
+impl From<MediaBuilderError> for AnkiError {
+    fn from(value: MediaBuilderError) -> Self {
+        Self::Builder(BuilderErrors::Media(value))
+    }
+}
+
 /// anki error
 #[derive(Debug, Error)]
 pub enum AnkiError {
@@ -24,6 +59,10 @@ pub enum AnkiError {
     /// this variant is used for debugging only
     #[error("{0}")]
     CustomSerde(#[from] CustomSerdeError),
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("[error/builder]: {0}")]
+    Builder(#[from] BuilderErrors),
 }
 
 #[derive(Debug, Error)]

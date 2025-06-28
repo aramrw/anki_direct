@@ -8,7 +8,7 @@ use serde_with::skip_serializing_none;
 use crate::{
     anki::AnkiConnectResult,
     error::{AnkiError, CustomSerdeError},
-    AnkiClient,
+    Backend,
 };
 
 #[skip_serializing_none]
@@ -44,9 +44,9 @@ impl<T: DeserializeOwned + Default> AnkiConnectResult<T> for GenericResult<T> {
     }
 }
 
-impl AnkiClient {
-    /// internal generic request
-    /// `<T>` specifies the `result` field for [GenericResult]
+impl Backend {
+    /// Internal generic request.
+    /// `<T>` specifies the `result` field for [GenericResult].
     ///
     /// # Examples
     ///

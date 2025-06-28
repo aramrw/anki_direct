@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::AnkiError,
     generic::{GenericRequest, GenericRequestBuilder},
-    AnkiClient, Number,
+    Backend, ModelsProxy, Number,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -116,7 +116,7 @@ struct ModelNameParams {
     model_name: String,
 }
 
-impl AnkiClient {
+impl ModelsProxy {
     /// Returns: `Map<(name, id)>`
     async fn get_all_model_names_and_ids(&self) -> Result<IndexMap<String, Number>, AnkiError> {
         type ModelsResult = IndexMap<String, Number>;
@@ -151,7 +151,9 @@ impl AnkiClient {
     ///     }
     /// }
     /// ```
-    async fn get_all_models_less(&self) -> Result<IndexMap<String, LessModelDetails>, AnkiError> {
+    pub async fn get_all_models_less(
+        &self,
+    ) -> Result<IndexMap<String, LessModelDetails>, AnkiError> {
         let indexmap = self.get_all_model_names_and_ids().await?;
         let futures = indexmap
             .into_iter()
@@ -243,21 +245,30 @@ impl AnkiClient {
 
 #[cfg(test)]
 mod modeltests {
-    use crate::test_utils::ANKICLIENT;
+    use crate::{error::AnkiResult, test_utils::ANKICLIENT};
 
     #[tokio::test]
     async fn get_all_model_names_and_ids() {
-        let res = ANKICLIENT.get_all_model_names_and_ids().await.unwrap();
+        let res = ANKICLIENT
+            .models()
+            .get_all_model_names_and_ids()
+            .await
+            .unwrap();
         assert!(!res.is_empty());
         dbg!(res);
     }
 
     #[tokio::test]
     async fn get_full_model_details() {
-        let res = ANKICLIENT.get_all_model_names_and_ids().await.unwrap();
+        let res = ANKICLIENT
+            .models()
+            .get_all_model_names_and_ids()
+            .await
+            .unwrap();
         assert!(!res.is_empty());
         let first = res.first().unwrap();
         let res = ANKICLIENT
+            .models()
             .get_full_model_details_by_name(first.0)
             .await
             .map_err(|e| e.pretty_panic())
@@ -266,21 +277,24 @@ mod modeltests {
     }
 
     #[tokio::test]
-    async fn get_less_model_details() {
-        let res = ANKICLIENT.get_all_model_names_and_ids().await.unwrap();
+    async fn get_less_model_details() -> AnkiResult<()> {
+        let res = ANKICLIENT
+            .models()
+            .get_all_model_names_and_ids()
+            .await?;
         assert!(!res.is_empty());
         let first = res.first().unwrap();
         let res = ANKICLIENT
+            .models()
             .get_less_model_details_by_name(first.0.into())
-            .await
-            .map_err(|e| e.pretty_panic())
-            .unwrap();
+            .await?;
         dbg!(res);
+        Ok(())
     }
 
     #[tokio::test]
     async fn get_all_models_less() {
-        let res = ANKICLIENT.get_all_models_less().await.unwrap();
+        let res = ANKICLIENT.models().get_all_models_less().await.unwrap();
         assert!(!res.is_empty());
         dbg!(res);
     }
