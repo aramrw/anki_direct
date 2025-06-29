@@ -17,7 +17,7 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-enum DuplicateScope {
+pub enum DuplicateScope {
     Deck,
     EntireCollection,
 }
@@ -33,7 +33,7 @@ impl Display for DuplicateScope {
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct NoteOptions {
+pub struct NoteOptions {
     allow_duplicate: bool,
     /// Can be used to specify the scope for which duplicates are checked.
     /// A value of "deck" will only check for duplicates in the target deck;
@@ -44,7 +44,7 @@ struct NoteOptions {
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct DuplicateScopeOptions {
+pub struct DuplicateScopeOptions {
     /// will specify which deck to use for checking duplicates in.
     /// If None, the target deck will be used.
     deck_name: Option<String>,

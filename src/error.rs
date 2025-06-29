@@ -4,6 +4,8 @@ use std::fmt::Debug;
 use serde_json::Value;
 use thiserror::Error;
 
+#[cfg(feature = "cache")]
+use crate::cache::CacheError;
 use crate::{
     generic::GenericRequestBuilderError,
     notes::{MediaBuilderError, NoteBuilderError},
@@ -63,6 +65,9 @@ pub enum AnkiError {
     Io(#[from] std::io::Error),
     #[error("[error/builder]: {0}")]
     Builder(#[from] BuilderErrors),
+    #[cfg(feature = "cache")]
+    #[error("[error/cache]: {0}")]
+    Cache(#[from] CacheError),
 }
 
 #[derive(Debug, Error)]

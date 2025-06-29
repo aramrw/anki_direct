@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::AnkiError,
     generic::{GenericRequest, GenericRequestBuilder},
-    Backend, ModelsProxy, Number,
+    notes::{Note, NoteBuilder},
+    ModelsProxy, Number,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -65,14 +66,14 @@ pub struct CardTemplate {
     pub back: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ModelTemplates {
     // The API returns a dictionary where the key is the card template name.
     #[serde(flatten)]
-    pub templates: HashMap<String, TemplateInfo>,
+    pub inner: IndexMap<String, TemplateInfo>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct TemplateInfo {
     #[serde(rename = "Front")]
     pub front: String,
@@ -80,7 +81,7 @@ pub struct TemplateInfo {
     pub back: String,
 }
 // Result for "modelStyling"
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelStyling {
     pub css: String,
@@ -88,15 +89,31 @@ pub struct ModelStyling {
     pub is_cloze: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum ModelDetails {
+    Less(LessModelDetails),
+    Full(FullModelDetails),
+}
+
+trait IntoNoteBuilder {
+    fn note_builder(&self) -> NoteBuilder;
+}
+
 /// Version of [FullModelDetails] that excludes the `templates` & `styling` fields
 /// It's recommended to call this if you only need the name and fields as it doesn't need to make extra requests
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LessModelDetails {
     pub name: String,
     pub fields: Vec<String>,
 }
+impl From<FullModelDetails> for LessModelDetails {
+    fn from(details: FullModelDetails) -> Self {
+        let FullModelDetails { name, fields, .. } = details;
+        LessModelDetails { name, fields }
+    }
+}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FullModelDetails {
     pub name: String,
     pub fields: Vec<String>,
@@ -107,6 +124,94 @@ impl FullModelDetails {
     /// A convenient helper to know if this model is a Cloze type.
     pub fn is_cloze(&self) -> bool {
         self.styling.is_cloze
+    }
+
+    /// Creates a mock [FullModelDetails] object for testing.
+    ///
+    /// This data is a simplified but structurally accurate representation
+    /// of a real Japanese vocabulary model
+    /// It's useful for testing functions that process or interact with Anki models
+    /// without making requests or needing async.
+    pub fn mock() -> Self {
+        FullModelDetails {
+            name: "JapaneseVocab".to_string(),
+            fields: vec![
+                "Sentence".to_string(),
+                "Reading".to_string(),
+                "Definition".to_string(),
+                "WordAudio".to_string(),
+                "Picture".to_string(),
+            ],
+            templates: ModelTemplates {
+                inner: IndexMap::from([(
+                    // A single card template named "Recognition"
+                    "Recognition".to_string(),
+                    TemplateInfo {
+                        // The front of the card just shows the sentence
+                        front: "<div class='sentence'>{{Sentence}}</div>".to_string(),
+                        // The back shows the answer
+                        back: r#"
+                            {{FrontSide}}
+                            <hr id="answer">
+                            <div class="picture">{{Picture}}</div>
+                            <div class="reading">{{Reading}}</div>
+                            <div class="definition">{{Definition}}</div>
+                            <div class="audio">{{WordAudio}}</div>
+                        "#
+                        .to_string(),
+                    },
+                )]),
+            },
+            styling: ModelStyling {
+                // CSS is simplified but styles the classes used in the template
+                css: r#"
+                    .card {
+                        font-family: "Noto Sans JP", sans-serif;
+                        background-color: #121511;
+                        color: white;
+                        text-align: center;
+                        border-radius: 10px;
+                        padding: 1em;
+                    }
+
+                    .sentence {
+                        font-size: 2rem;
+                        margin-bottom: 1rem;
+                    }
+
+                    .reading {
+                        font-size: 1.5rem;
+                        color: #89daff; /* a color from your real css */
+                    }
+
+                    .definition {
+                        margin-top: 1rem;
+                        font-size: 1.2rem;
+                    }
+
+                    img {
+                        max-width: 200px;
+                        border-radius: 5px;
+                    }
+                "#
+                .to_string(),
+                // This model type is not a cloze deletion
+                is_cloze: false,
+            },
+        }
+    }
+
+    /// Finds templates by their names and returns an iterator
+    pub fn find_templates_by_names<'a>(
+        &'a self,
+        template_names: &'a [&str],
+    ) -> impl Iterator<Item = (&'a str, &'a TemplateInfo)> {
+        template_names.iter().filter_map(move |name| {
+            self.templates
+                .inner
+                .get_key_value(*name)
+                .map(|(k, v)| (k.as_str(), v))
+        })
     }
 }
 
@@ -164,6 +269,42 @@ impl ModelsProxy {
         Ok(res)
     }
 
+    // Get all models found in current anki session.
+    /// Returns: `Map<(name, details)>`
+    ///
+    /// # Example
+    ///
+    /// This function can be used to update a cache:
+    /// ```no_run
+    /// #[derive(Default)]
+    /// struct ModelCache(IndexMap<String, LessModelDetails);
+    ///
+    /// static CACHE: LazyLock<RwLock<ModelCache>> = LazyLock::new(|| {
+    ///     ModelCache::default().into()
+    /// })
+    ///
+    /// impl ModelCache {
+    ///     async fn update() {
+    ///         let ac = AnkiClient::default_latest();
+    ///         let latest = ac.get_all_models_less().await.expect("u have no models");
+    ///         let mut cache = CACHE.write().unwrap();
+    ///         cache = latest;
+    ///     }
+    /// }
+    /// ```
+    pub async fn get_all_models_full(
+        &self,
+    ) -> Result<IndexMap<String, FullModelDetails>, AnkiError> {
+        let indexmap = self.get_all_model_names_and_ids().await?;
+        let futures = indexmap
+            .into_iter()
+            .map(move |(name, _id)| self.get_full_model_details_by_name(name.into()));
+        let details = try_join_all(futures.into_iter()).await?;
+        let res: IndexMap<String, FullModelDetails> =
+            details.into_iter().map(|d| (d.name.clone(), d)).collect();
+        Ok(res)
+    }
+
     /// Fetches the complete list of field names for the provided model name.
     /// https://git.sr.ht/~foosoft/anki-connect#codemodelfieldnamescode
     pub async fn get_model_field_names(&self, model_name: &str) -> Result<Vec<String>, AnkiError> {
@@ -215,12 +356,13 @@ impl ModelsProxy {
     /// [Self::get_model_styling]
     pub async fn get_full_model_details_by_name(
         &self,
-        model_name: &str,
+        model_name: Cow<'_, str>,
     ) -> Result<FullModelDetails, AnkiError> {
+        let model_name = model_name.into_owned();
         let (fields, templates, styling) = tokio::try_join!(
-            self.get_model_field_names(model_name),
-            self.get_model_templates(model_name),
-            self.get_model_styling(model_name)
+            self.get_model_field_names(&model_name),
+            self.get_model_templates(&model_name),
+            self.get_model_styling(&model_name)
         )?;
 
         Ok(FullModelDetails {
@@ -237,7 +379,7 @@ impl ModelsProxy {
     ) -> Result<LessModelDetails, AnkiError> {
         let fields = self.get_model_field_names(&model_name).await?;
         Ok(LessModelDetails {
-            name: model_name.to_string(),
+            name: model_name.into_owned(),
             fields,
         })
     }
@@ -269,7 +411,7 @@ mod modeltests {
         let first = res.first().unwrap();
         let res = ANKICLIENT
             .models()
-            .get_full_model_details_by_name(first.0)
+            .get_full_model_details_by_name(first.0.into())
             .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
@@ -278,10 +420,7 @@ mod modeltests {
 
     #[tokio::test]
     async fn get_less_model_details() -> AnkiResult<()> {
-        let res = ANKICLIENT
-            .models()
-            .get_all_model_names_and_ids()
-            .await?;
+        let res = ANKICLIENT.models().get_all_model_names_and_ids().await?;
         assert!(!res.is_empty());
         let first = res.first().unwrap();
         let res = ANKICLIENT

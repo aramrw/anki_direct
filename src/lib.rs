@@ -2,33 +2,80 @@
 
 pub mod anki;
 #[cfg(feature = "cache")]
-mod cache;
+pub mod cache;
 pub mod error;
 mod generic;
-mod model;
+pub mod model;
 pub mod notes;
 pub mod result;
 mod str_utils;
 mod test_utils;
 
-use std::{ops::Deref, sync::Arc};
+use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
-#[cfg(feature = "cache")]
-use cache::Cache;
+use derive_where::derive_where;
 use error::{AnkiError, CustomSerdeError};
+use getset::Getters;
 use num_traits::PrimInt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use thiserror::Error;
 
-#[derive(Clone, Debug)]
-struct AnkiClient {
+#[cfg(feature = "cache")]
+use crate::cache::Cache;
+use crate::error::AnkiResult;
+
+#[derive(Clone, Debug, Getters)]
+pub struct AnkiClient {
     backend: Arc<Backend>,
     modules: Arc<AnkiModules>,
     #[cfg(feature = "cache")]
+    #[getset(get = "pub", get_mut = "pub")]
     cache: Cache,
 }
 impl AnkiClient {
+    #[cfg(feature = "cache")]
+    pub fn cache_mut(&mut self) -> &mut Cache {
+        &mut self.cache
+    }
+    /// Creates a new [AnkiClient] with the specified port.
+    /// If `ankiconnect` isn't open\running on the port, returns `Err(`[AnkiError::ConnectionNotFound]`)`
+    /// Has `_auto` prefix meaning it gets the version from [ankiconnect](https://git.sr.ht/~foosoft/anki-connect)
+    /// # Parameters
+    ///
+    /// * `port`: The port where `ankiconnect` is running.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// // ankiconnect's default is "8765"
+    /// let client = Backend::new("8765");
+    /// ```
+    pub async fn new_auto(port: &str) -> AnkiResult<Self> {
+        let backend = Arc::new(Backend::new(port).await?);
+        let modules = Arc::new(AnkiModules::new(backend.clone()));
+        Ok(Self {
+            backend: backend.clone(),
+            modules: modules.clone(),
+            #[cfg(feature = "cache")]
+            cache: Cache::init(modules),
+        })
+    }
+    /// This fn is not `async` so you can initialize it in statics.
+    ///
+    /// `Note`: Not `async` because it doesn't check versions or make requests,
+    /// so the first query could error if ankiconnect is not open, or the version is not correct.
+    pub fn new_sync(port: &str, version: u8) -> Self {
+        let backend = Arc::new(Backend::new_sync(port, version));
+        let modules = Arc::new(AnkiModules::new(backend.clone()));
+        Self {
+            backend: backend.clone(),
+            modules: modules.clone(),
+            #[cfg(feature = "cache")]
+            cache: Cache::init(modules),
+        }
+    }
     pub fn notes(&self) -> &NotesProxy {
         &self.modules.notes
     }
@@ -47,6 +94,13 @@ struct AnkiModules {
     notes: NotesProxy,
     models: ModelsProxy,
 }
+impl PartialEq for AnkiModules {
+    fn eq(&self, other: &Self) -> bool {
+        let Self { backend, .. } = other;
+        self.backend == *backend
+    }
+}
+
 impl AnkiModules {
     fn new(backend: Arc<Backend>) -> Self {
         Self {
@@ -93,13 +147,6 @@ impl Deref for AnkiClient {
     }
 }
 
-#[cfg(feature = "cache")]
-impl AnkiClient {
-    fn cache(&self) -> &Cache {
-        &self.cache
-    }
-}
-
 /// `Backend` is a struct that allows you to communicate with the AnkiConnect API.
 ///
 /// It contains the following fields:
@@ -112,6 +159,16 @@ pub struct Backend {
     pub client: Client,
     pub version: u8,
 }
+
+impl PartialEq for Backend {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            endpoint, version, ..
+        } = self;
+        other.endpoint == *endpoint && other.version == *version
+    }
+}
+impl Eq for Backend {}
 
 impl Default for Backend {
     /// Sync fn that is the same as [Self::default_auto()]
