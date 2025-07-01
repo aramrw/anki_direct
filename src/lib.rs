@@ -3,6 +3,7 @@
 pub mod anki;
 #[cfg(feature = "cache")]
 pub mod cache;
+pub mod decks;
 pub mod error;
 mod generic;
 pub mod model;
@@ -15,7 +16,7 @@ use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
 use derive_where::derive_where;
 use error::{AnkiError, CustomSerdeError};
-use getset::Getters;
+use getset::{Getters, MutGetters};
 use num_traits::PrimInt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -25,8 +26,9 @@ use thiserror::Error;
 #[cfg(feature = "cache")]
 use crate::cache::Cache;
 use crate::error::AnkiResult;
+pub use reqwest::Client as ReqwestClient;
 
-#[derive(Clone, Debug, Getters)]
+#[derive(Clone, Debug, Getters, MutGetters)]
 pub struct AnkiClient {
     backend: Arc<Backend>,
     modules: Arc<AnkiModules>,
@@ -35,10 +37,6 @@ pub struct AnkiClient {
     cache: Cache,
 }
 impl AnkiClient {
-    #[cfg(feature = "cache")]
-    pub fn cache_mut(&mut self) -> &mut Cache {
-        &mut self.cache
-    }
     /// Creates a new [AnkiClient] with the specified port.
     /// If `ankiconnect` isn't open\running on the port, returns `Err(`[AnkiError::ConnectionNotFound]`)`
     /// Has `_auto` prefix meaning it gets the version from [ankiconnect](https://git.sr.ht/~foosoft/anki-connect)
@@ -88,11 +86,13 @@ impl AnkiClient {
     }
 }
 
-#[derive(Clone, Debug)]
-struct AnkiModules {
+#[derive(Clone, Debug, Getters)]
+pub struct AnkiModules {
     backend: Arc<Backend>,
     notes: NotesProxy,
     models: ModelsProxy,
+    #[getset(get = "pub")]
+    decks: DecksProxy,
 }
 impl PartialEq for AnkiModules {
     fn eq(&self, other: &Self) -> bool {
@@ -107,12 +107,13 @@ impl AnkiModules {
             backend: backend.clone(),
             notes: NotesProxy(backend.clone()),
             models: ModelsProxy(backend.clone()),
+            decks: DecksProxy(backend.clone()),
         }
     }
 }
 
 #[derive(Clone, Debug)]
-struct NotesProxy(Arc<Backend>);
+pub struct NotesProxy(Arc<Backend>);
 impl Deref for NotesProxy {
     type Target = Arc<Backend>;
     fn deref(&self) -> &Self::Target {
@@ -120,8 +121,16 @@ impl Deref for NotesProxy {
     }
 }
 #[derive(Clone, Debug)]
-struct ModelsProxy(Arc<Backend>);
+pub struct ModelsProxy(Arc<Backend>);
 impl Deref for ModelsProxy {
+    type Target = Arc<Backend>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[derive(Clone, Debug)]
+pub struct DecksProxy(Arc<Backend>);
+impl Deref for DecksProxy {
     type Target = Arc<Backend>;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -272,7 +281,8 @@ impl Backend {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+/// Abstraction over any non-floating point number
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Number(isize);
 impl Number {
     pub fn new(int: impl PrimInt) -> Self {

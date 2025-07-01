@@ -133,9 +133,22 @@ pub struct Note {
 }
 
 impl NoteBuilder {
-    fn field(&mut self, field_name: &str, value: &str) -> &mut Self {
+    pub fn field(&mut self, field_name: &str, value: &str) -> &mut Self {
         let fields = self.fields.get_or_insert_with(IndexMap::new);
         fields.insert(field_name.into(), value.into());
+        self
+    }
+
+    /// Appends current fields with an [Iterator]<`(field_name, content)`>;
+    pub fn extend_fields(
+        &mut self,
+        append: impl IntoIterator<Item = (String, String)>,
+    ) -> &mut Self {
+        let Some(fields) = &mut self.fields else {
+            self.fields = Some(append.into_iter().collect());
+            return self;
+        };
+        fields.extend(append);
         self
     }
 
@@ -192,7 +205,7 @@ impl NoteBuilder {
     ///
     /// If you created all media using builder using only `data` field directly,
     /// it will not make any internal requests.
-    async fn build(&mut self, client: Option<&Client>) -> AnkiResult<Note> {
+    pub async fn build(&mut self, client: Option<&Client>) -> AnkiResult<Note> {
         // populates a new Note
         let mut note = Note::default();
         // Ensure that the anki fields is set
@@ -227,7 +240,7 @@ pub enum MediaPathError {
     #[error("path is neither relative nor absolute.\n[path]: {0}")]
     InvalidVariant(String),
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MediaPath(PathBuf);
 impl MediaPath {
     fn from_path(buf: PathBuf) -> Result<Self, MediaPathError> {
@@ -255,7 +268,7 @@ pub enum MediaSourceError {
     Path(#[from] MediaPathError),
 }
 // This enum represents where the media data comes from.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MediaSource {
     /// Raw base64 provided directly.
     Data(Vec<u8>),

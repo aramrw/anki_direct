@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::AnkiError,
     generic::{GenericRequest, GenericRequestBuilder},
-    notes::{Note, NoteBuilder},
+    notes::NoteBuilder,
     ModelsProxy, Number,
 };
 
@@ -100,7 +100,7 @@ trait IntoNoteBuilder {
 }
 
 /// Version of [FullModelDetails] that excludes the `templates` & `styling` fields
-/// It's recommended to call this if you only need the name and fields as it doesn't need to make extra requests
+/// It's recommended to use this as `<T>` if you only need the name and fields as it doesn't need to make extra requests
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LessModelDetails {
     pub name: String,
@@ -223,6 +223,7 @@ struct ModelNameParams {
 
 impl ModelsProxy {
     /// Returns: `Map<(name, id)>`
+    /// `See:` [ankiconnect/modelNamesAndIds](https://git.sr.ht/~foosoft/anki-connect#codemodelnamesandidscode)
     async fn get_all_model_names_and_ids(&self) -> Result<IndexMap<String, Number>, AnkiError> {
         type ModelsResult = IndexMap<String, Number>;
         let payload: GenericRequest<()> = GenericRequestBuilder::default()
@@ -286,7 +287,7 @@ impl ModelsProxy {
     /// impl ModelCache {
     ///     async fn update() {
     ///         let ac = AnkiClient::default_latest();
-    ///         let latest = ac.get_all_models_less().await.expect("u have no models");
+    ///         let latest = ac.get_all_models_full().await.expect("u have no models");
     ///         let mut cache = CACHE.write().unwrap();
     ///         cache = latest;
     ///     }
