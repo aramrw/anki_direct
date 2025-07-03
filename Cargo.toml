@@ -1,6 +1,6 @@
 [package]
 name = "anki_direct"
-version = "0.0.12"
+version = "0.0.13"
 authors = ["aramrw <aramitsa@gmail.com>"]
 description = "A Simple Rust library for AnkiConnect API"
 license = "MIT"
