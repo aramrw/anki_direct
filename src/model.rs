@@ -11,13 +11,19 @@ use crate::{
     ModelsProxy, Number,
 };
 
+/// `NoteType` represents the two main types of notes in Anki: Regular and Cloze.
+/// This enum allows for handling both types uniformly.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum NoteType {
+    /// A regular note type, typically used for front/back cards.
     Regular(RegNoteType),
+    /// A cloze deletion note type, used for fill-in-the-blank cards.
     Cloze(ClozeNoteType),
 }
 
+/// `RegNoteType` represents a regular (non-cloze) note type in Anki.
+/// It contains information about the note type's ID, name, fields, and card templates.
 #[derive(Clone, Debug, Serialize, Deserialize, Builder)]
 pub struct RegNoteType {
     #[builder(setter(custom))]
@@ -36,6 +42,8 @@ impl RegNoteTypeBuilder {
     }
 }
 
+/// `ClozeNoteType` represents a cloze deletion note type in Anki.
+/// It contains information about the note type's ID, name, fields, and a single card template.
 #[derive(Clone, Debug, Serialize, Deserialize, Builder)]
 pub struct ClozeNoteType {
     #[builder(setter(custom))]
@@ -54,16 +62,20 @@ impl ClozeNoteTypeBuilder {
     }
 }
 
-// In anki::models::card_template
+/// `CardTemplate` represents a single card template within an Anki model.
+/// It defines the structure and content of the front and back of a card using HTML.
 #[derive(Clone, Debug, Serialize, Deserialize, Builder, Default)]
 pub struct CardTemplate {
+    /// The name of the card template (e.g., "Recognition", "Recall").
     pub name: String,
-    // HTML template
+    /// The HTML content for the front of the card.
     pub front: String,
-    // HTML template
+    /// The HTML content for the back of the card.
     pub back: String,
 }
 
+/// `ModelTemplates` holds a collection of card templates for a given Anki model.
+/// The `inner` field is an `IndexMap` where keys are template names and values are `TemplateInfo`.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ModelTemplates {
     // The API returns a dictionary where the key is the card template name.
@@ -71,6 +83,7 @@ pub struct ModelTemplates {
     pub inner: IndexMap<String, TemplateInfo>,
 }
 
+/// `TemplateInfo` contains the front and back HTML content for a card template.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct TemplateInfo {
     #[serde(rename = "Front")]
@@ -78,7 +91,7 @@ pub struct TemplateInfo {
     #[serde(rename = "Back")]
     pub back: String,
 }
-// Result for "modelStyling"
+/// `ModelStyling` contains the CSS styling and cloze status for an Anki model.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelStyling {

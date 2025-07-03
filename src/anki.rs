@@ -5,6 +5,20 @@ use serde::de::DeserializeOwned;
 use crate::str_utils::camel_case_split;
 
 #[derive(Clone, Debug)]
+/// `AnkiQuery` represents a search query that can be used to find notes or cards in Anki.
+/// It supports predefined card states and custom query strings.
+///
+/// # Examples
+///
+/// ```
+/// use anki_direct::anki::{AnkiQuery, CardState};
+/// 
+/// let query_new_cards = AnkiQuery::CardState(CardState::IsNew);
+/// assert_eq!(query_new_cards.to_string(), "is:new");
+/// 
+/// let custom_query = AnkiQuery::from("deck:MyDeck tag:vocabulary");
+/// assert_eq!(custom_query.to_string(), "deck:MyDeck tag:vocabulary");
+/// ```
 pub enum AnkiQuery {
     CardState(CardState),
     Custom(String),

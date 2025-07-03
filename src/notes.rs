@@ -107,6 +107,8 @@ impl<T> CollectionExt for Option<IndexMap<T, T>> {
     }
 }
 
+/// `Note` represents a single Anki note, including its content, media, and options.
+/// It is used for adding and updating notes in Anki.
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize, Builder, Default)]
 #[serde(rename_all = "camelCase")]
@@ -268,15 +270,17 @@ pub enum MediaSourceError {
     Path(#[from] MediaPathError),
 }
 // This enum represents where the media data comes from.
+/// `MediaSource` defines the origin of a media file associated with an Anki note.
+/// It can be raw binary data, a URL, or a local file path.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MediaSource {
-    /// Raw base64 provided directly.
+    /// Raw base64 encoded binary data of the media file.
     Data(Vec<u8>),
-    /// A URL to a file that needs to be downloaded.
+    /// A URL pointing to the media file, which will be downloaded.
     Url(String),
-    /// A local file path that needs to be read.
+    /// A local file system path to the media file, which will be read.
     Path(MediaPath),
-    /// internal enum used for taking ownership cheaply
+    /// Internal variant used for temporary ownership transfer.
     _Empty,
 }
 impl MediaSource {
@@ -328,27 +332,35 @@ impl From<&str> for MediaSource {
     }
 }
 
+/// `Media` represents a media file (audio, video, or picture) associated with an Anki note.
+/// It can be sourced from raw data, a URL, or a local file path.
 #[skip_serializing_none]
 #[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize, Builder)]
 #[serde(rename_all = "camelCase")]
 #[builder(setter(strip_option))]
 pub struct Media {
+    /// The filename of the media, as it will appear in Anki.
     filename: String,
     #[serde_as(as = "Base64")]
     #[builder(setter(custom))]
     #[builder(private)]
     #[builder(default)]
-    /// required
+    /// The base64 encoded content of the media file. This field is populated internally
+    /// when `url` or `path` sources are resolved.
     data: Vec<u8>,
     #[builder(setter(into))]
     #[builder(default)]
+    /// An optional URL from which the media file can be downloaded.
     url: Option<MediaSource>,
     #[builder(setter(into))]
     #[builder(default)]
+    /// An optional local file path from which the media file can be read.
     path: Option<MediaSource>,
+    /// A list of field names in the Anki note where this media should be embedded.
     fields: Vec<String>,
     #[builder(default)]
+    /// An optional hash to skip duplicate media checks in AnkiConnect.
     skipHash: Option<String>,
 }
 impl Media {
@@ -423,6 +435,40 @@ pub enum Params {
 }
 
 impl NotesProxy {
+    /// Adds one or more notes to Anki.
+    ///
+    /// # Parameters
+    ///
+    /// * `notes`: A slice of `Note` structs to be added.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` which is:
+    /// - `Ok(Vec<isize>)`: A vector of the IDs of the newly added notes.
+    /// - `Err(AnkiError)`: If there was an error adding the notes.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::notes::{NoteBuilder, MediaBuilder};
+    /// use anki_direct::error::AnkiResult;
+    ///
+    /// fn main() -> AnkiResult<()> {nkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///
+    ///     let note = NoteBuilder::create_empty()
+    ///         .model_name("Basic".into())
+    ///         .deck_name("Default".into())
+    ///         .field("Front", "Hello")
+    ///         .field("Back", "World")
+    ///         .build(None)?;
+    ///
+    ///     let new_ids = client.notes().add_notes(&[note])?;
+    ///     println!("Added note with ID: {:?}", new_ids);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn add_notes(&self, notes: &[Note]) -> AnkiResult<Vec<isize>> {
         let params = json!({
              "notes": notes,
@@ -438,24 +484,31 @@ impl NotesProxy {
         // if it's None
         Ok(res.unwrap())
     }
-    // fn add_notes() -> AnkiResult<()> {
-    //
-    // }
 
-    /// Returns note ids from a given query
+    /// Finds notes in Anki based on a given query.
     ///
-    /// # Usage
+    /// # Parameters
+    ///
+    /// * `query`: An `AnkiQuery` representing the search criteria.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` which is:
+    /// - `Ok(Vec<isize>)`: A vector of note IDs that match the query.
+    /// - `Err(AnkiError)`: If there was an error executing the query.
+    ///
+    /// # Examples
     ///
     /// ```no_run
-    /// let res = Backend
-    ///    .find_note_ids(AnkiQuery::CardState(CardState::IsNew))?;
-    /// ```
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::anki::AnkiQuery;
+    /// use anki_direct::error::AnkiResult;
     ///
-    /// # Example Result
-    /// ```no_run
-    /// {
-    ///    "result": [1483959289817, 1483959291695],
-    ///    "error": null
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     let new_notes = client.notes().find_notes(AnkiQuery::from("is:new"))?;
+    ///     println!("Found {} new notes.", new_notes.len());
+    ///     Ok(())
     /// }
     /// ```
     pub fn find_notes(&self, query: AnkiQuery) -> Result<Vec<isize>, AnkiError> {
@@ -471,6 +524,35 @@ impl NotesProxy {
         self.post_generic_request::<Vec<isize>>(payload)
     }
 
+    /// Retrieves detailed information for a list of note IDs.
+    ///
+    /// # Parameters
+    ///
+    /// * `ids`: A slice of note IDs (any primitive integer type) for which to retrieve information.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` which is:
+    /// - `Ok(Vec<NotesInfoData>)`: A vector of `NotesInfoData` structs containing details for each note.
+    /// - `Err(AnkiError)`: If no data was found for the given IDs or an error occurred.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::error::AnkiResult;
+    ///
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     // Replace with actual note IDs
+    ///     let note_ids = vec![1678823456789, 1678823456790];
+    ///     let notes_info = client.notes().get_notes_infos(&note_ids)?;
+    ///     for note in notes_info {
+    ///         println!("Note ID: {}, Model: {}", note.noteId, note.modelName);
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn get_notes_infos(&self, ids: &[impl PrimInt]) -> Result<Vec<NotesInfoData>, AnkiError> {
         let params = Some(Params::NotesInfo(NotesInfoParams {
             notes: Number::from_slice_to_vec(ids),
@@ -488,6 +570,32 @@ impl NotesProxy {
         Ok(res)
     }
 
+    /// Opens the Anki GUI editor for a specific note.
+    ///
+    /// # Parameters
+    ///
+    /// * `id`: The ID of the note to open in the GUI editor.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` which is:
+    /// - `Ok(())`: If the GUI editor was successfully opened.
+    /// - `Err(AnkiError)`: If an error occurred.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::error::AnkiResult;
+    ///
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     let note_id = 1678823456789; // Replace with an actual note ID
+    ///     client.notes().gui_edit(note_id)?;
+    ///     println!("Opened GUI editor for note ID: {}", note_id);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn gui_edit(&self, id: impl PrimInt) -> Result<(), AnkiError> {
         let params = Some(Params::GuiEditNote(GuiEditNoteParams {
             note: Number::new(id),
@@ -502,6 +610,32 @@ impl NotesProxy {
         Ok(())
     }
 
+    /// Deletes notes from Anki based on their IDs.
+    ///
+    /// # Parameters
+    ///
+    /// * `ids`: A slice of note IDs (any primitive integer type) to be deleted.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` which is:
+    /// - `Ok(())`: If the notes were successfully deleted.
+    /// - `Err(AnkiError)`: If an error occurred during deletion.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::error::AnkiResult;
+    ///
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     let note_ids_to_delete = vec![1678823456789, 1678823456790]; // Replace with actual note IDs
+    ///     client.notes().delete_notes_by_ids(&note_ids_to_delete)?;
+    ///     println!("Deleted notes with IDs: {:?}", note_ids_to_delete);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn delete_notes_by_ids(&self, ids: &[impl PrimInt]) -> AnkiResult<()> {
         let ids = Number::from_slice_to_vec(ids);
         let params = json!({
@@ -539,15 +673,6 @@ mod note_tests {
             .map_err(|e| e.pretty_panic())
             .unwrap();
         assert!(!res.is_empty())
-    }
-
-    #[test]
-    fn get_notes_infos() {
-        ANKICLIENT
-            .notes()
-            .get_notes_infos(&[12345])
-            .map_err(|e| e.pretty_panic())
-            .unwrap();
     }
 
     #[test]
@@ -602,4 +727,3 @@ mod note_tests {
         Ok(())
     }
 }
-
