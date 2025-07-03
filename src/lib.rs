@@ -12,7 +12,7 @@ pub mod result;
 mod str_utils;
 mod test_utils;
 
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 use error::{AnkiError, CustomSerdeError};
 use getset::{Getters, MutGetters};
@@ -48,8 +48,8 @@ impl AnkiClient {
     /// // ankiconnect's default is "8765"
     /// let client = Backend::new("8765");
     /// ```
-    pub async fn new_auto(port: &str) -> AnkiResult<Self> {
-        let backend = Arc::new(Backend::new(port).await?);
+    pub fn new_auto(port: &str) -> AnkiResult<Self> {
+        let backend = Arc::new(Backend::new(port)?);
         let modules = Arc::new(AnkiModules::new(backend.clone()));
         Ok(Self {
             backend: backend.clone(),
@@ -206,10 +206,10 @@ impl Backend {
     /// // ankiconnect's default is "8765"
     /// let client = Backend::new("8765");
     /// ```
-    pub async fn new(port: &str) -> Result<Self, AnkiError> {
+    pub fn new(port: &str) -> Result<Self, AnkiError> {
         let client = BlockingClient::new();
         let endpoint = Self::format_url(port);
-        let version = Backend::get_version_internal(&client, &endpoint).await?;
+        let version = Backend::get_version_internal(&client, &endpoint)?;
         let ac = Self {
             endpoint,
             client,
@@ -223,8 +223,8 @@ impl Backend {
     /// ```
     /// let client = Backend::new("8765");
     /// ```
-    pub async fn default_auto() -> Result<Self, AnkiError> {
-        Self::new("8765").await
+    pub fn default_auto() -> Result<Self, AnkiError> {
+        Self::new("8765")
     }
 
     /// This fn is not `async` so you can initialize it in statics.
@@ -255,7 +255,7 @@ impl Backend {
     }
 
     /// makes a get request to ankiconnect to get its version
-    pub async fn get_version_internal(c: &BlockingClient, url: &str) -> Result<u8, AnkiError> {
+    pub fn get_version_internal(c: &BlockingClient, url: &str) -> Result<u8, AnkiError> {
         let res = match c.get(url).send() {
             Ok(response) => response,
             Err(_) => return Err(AnkiError::ConnectionNotFound(url.to_string())),

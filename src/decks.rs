@@ -15,12 +15,12 @@ pub struct DeckConfig {
 }
 
 impl DecksProxy {
-    pub async fn get_all_deck_names_and_ids(&self) -> AnkiResult<IndexMap<String, Number>> {
+    pub fn get_all_deck_names_and_ids(&self) -> AnkiResult<IndexMap<String, Number>> {
         type DecksResult = IndexMap<String, Number>;
         let payload: GenericRequest<()> = GenericRequestBuilder::default()
             .action("deckNamesAndIds".into())
             .version(self.version)
             .build()?;
-        self.post_generic_request::<DecksResult>(payload).await
+        self.post_generic_request::<DecksResult>(payload)
     }
 }

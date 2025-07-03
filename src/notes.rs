@@ -155,24 +155,24 @@ impl NoteBuilder {
     /// `audios`, `videos`, and `pictures` fields get mutated into holding [base64] data
     /// aka url or path media get turned into [Vec<u8>] instead of having ankiconnect do the
     /// downloading
-    async fn convert_media_fields_to_bytes(
+    fn convert_media_fields_to_bytes(
         &mut self,
         client: Option<&BlockingClient>,
     ) -> AnkiResult<&mut Self> {
         // Convert media sources to bytes
         if let Some(Some(audios)) = &mut self.audios {
             for audio in audios.iter_mut() {
-                audio.data(client).await?;
+                audio.data(client)?;
             }
         }
         if let Some(Some(videos)) = &mut self.videos {
             for video in videos.iter_mut() {
-                video.data(client).await?;
+                video.data(client)?;
             }
         }
         if let Some(Some(pictures)) = &mut self.pictures {
             for picture in pictures.iter_mut() {
-                picture.data(client).await?;
+                picture.data(client)?;
             }
         }
         Ok(self)
@@ -205,7 +205,7 @@ impl NoteBuilder {
     ///
     /// If you created all media using builder using only `data` field directly,
     /// it will not make any internal requests.
-    pub async fn build(&mut self, client: Option<&BlockingClient>) -> AnkiResult<Note> {
+    pub fn build(&mut self, client: Option<&BlockingClient>) -> AnkiResult<Note> {
         // populates a new Note
         let mut note = Note::default();
         // Ensure that the anki fields is set
@@ -221,7 +221,7 @@ impl NoteBuilder {
         note.model_name = self.model_name.take().unwrap();
 
         // final step: convert media sources to bytes
-        self.convert_media_fields_to_bytes(client).await?;
+        self.convert_media_fields_to_bytes(client)?;
 
         note.audios = self.audios.take().flatten();
         note.videos = self.videos.take().flatten();
@@ -286,13 +286,13 @@ impl MediaSource {
     /// - Directly return the data if type is already [MediaSource::Data]
     /// - Download the bytes from a URL if the variant is [MediaSource::Url]
     /// - Read the data from a local file if the variant is [MediaSource::Path]
-    pub async fn to_data(&self, client: Option<&BlockingClient>) -> Result<Vec<u8>, AnkiError> {
+    pub fn to_data(&self, client: Option<&BlockingClient>) -> Result<Vec<u8>, AnkiError> {
         match self {
             // Variant 1: The data is already here.
             // We just need to clone it to return an owned Vec<u8>.
             MediaSource::Data(data) => Ok(data.clone()),
 
-            // Variant 2: We need to perform an async network request.
+            // Variant 2: We need to perform a network request.
             MediaSource::Url(url) => {
                 println!("Downloading from URL: {url}");
                 let client = match client {
@@ -304,12 +304,11 @@ impl MediaSource {
                 Ok(bytes.to_vec())
             }
 
-            // Variant 3: We need to perform an async file system read.
+            // Variant 3: We need to perform a file system read.
             MediaSource::Path(path) => {
-                println!("Reading from path: {:?}", path);
-                // Use tokio's async file reader. The `?` will convert
-                // a `std::io::Error` into our `MediaError::FileIo`.
-                let bytes = tokio::fs::read(path).await?;
+                println!("Reading from path: {path:?}");
+                // Use std::fs::read.
+                let bytes = std::fs::read(path)?;
                 Ok(bytes)
             }
             _ => unreachable!(),
@@ -371,11 +370,11 @@ impl Media {
     /// # Reason
     /// Avoids AnkiConnect download by preparing data before sending.
     /// Only base64 encoded data is passed to AnkiConnect.
-    pub async fn data(&mut self, client: Option<&BlockingClient>) -> AnkiResult<&mut Self> {
+    pub fn data(&mut self, client: Option<&BlockingClient>) -> AnkiResult<&mut Self> {
         // Try to extract data from available sources
         let bytes = match (&mut self.url, &mut self.path, &self.data) {
-            (Some(url), _, _) => url.to_data(client).await?,
-            (_, Some(path), _) => path.to_data(client).await?,
+            (Some(url), _, _) => url.to_data(client)?,
+            (_, Some(path), _) => path.to_data(client)?,
             (_, _, bytes) => {
                 // Data already exists, return early
                 if !bytes.is_empty() {
@@ -424,7 +423,7 @@ pub enum Params {
 }
 
 impl NotesProxy {
-    pub async fn add_notes(&self, notes: &[Note]) -> AnkiResult<Vec<isize>> {
+    pub fn add_notes(&self, notes: &[Note]) -> AnkiResult<Vec<isize>> {
         let params = json!({
              "notes": notes,
         });
@@ -434,9 +433,7 @@ impl NotesProxy {
             .params(Some(params))
             .build()
             .unwrap();
-        let res = self
-            .post_generic_request::<Option<Vec<isize>>>(payload)
-            .await?;
+        let res = self.post_generic_request::<Option<Vec<isize>>>(payload)?;
         // safe because generic request will return an err
         // if it's None
         Ok(res.unwrap())
@@ -451,8 +448,7 @@ impl NotesProxy {
     ///
     /// ```no_run
     /// let res = Backend
-    ///    .find_note_ids(AnkiQuery::CardState(CardState::IsNew))
-    ///    .await?;
+    ///    .find_note_ids(AnkiQuery::CardState(CardState::IsNew))?;
     /// ```
     ///
     /// # Example Result
@@ -462,7 +458,7 @@ impl NotesProxy {
     ///    "error": null
     /// }
     /// ```
-    pub async fn find_notes(&self, query: AnkiQuery) -> Result<Vec<isize>, AnkiError> {
+    pub fn find_notes(&self, query: AnkiQuery) -> Result<Vec<isize>, AnkiError> {
         let params = Some(Params::FindNotes(FindNotesParams {
             query: query.to_string(),
         }));
@@ -472,13 +468,10 @@ impl NotesProxy {
             .params(params)
             .build()
             .unwrap();
-        self.post_generic_request::<Vec<isize>>(payload).await
+        self.post_generic_request::<Vec<isize>>(payload)
     }
 
-    pub async fn get_notes_infos(
-        &self,
-        ids: &[impl PrimInt],
-    ) -> Result<Vec<NotesInfoData>, AnkiError> {
+    pub fn get_notes_infos(&self, ids: &[impl PrimInt]) -> Result<Vec<NotesInfoData>, AnkiError> {
         let params = Some(Params::NotesInfo(NotesInfoParams {
             notes: Number::from_slice_to_vec(ids),
         }));
@@ -488,16 +481,14 @@ impl NotesProxy {
             .params(params)
             .build()
             .unwrap();
-        let res = self
-            .post_generic_request::<Vec<NotesInfoData>>(payload)
-            .await?;
+        let res = self.post_generic_request::<Vec<NotesInfoData>>(payload)?;
         if res.is_empty() {
             return Err(AnkiError::NoDataFound);
         }
         Ok(res)
     }
 
-    pub async fn gui_edit(&self, id: impl PrimInt) -> Result<(), AnkiError> {
+    pub fn gui_edit(&self, id: impl PrimInt) -> Result<(), AnkiError> {
         let params = Some(Params::GuiEditNote(GuiEditNoteParams {
             note: Number::new(id),
         }));
@@ -507,11 +498,11 @@ impl NotesProxy {
             .params(params)
             .build()
             .unwrap();
-        self.post_generic_request::<()>(payload).await?;
+        self.post_generic_request::<()>(payload)?;
         Ok(())
     }
 
-    pub async fn delete_notes_by_ids(&self, ids: &[impl PrimInt]) -> AnkiResult<()> {
+    pub fn delete_notes_by_ids(&self, ids: &[impl PrimInt]) -> AnkiResult<()> {
         let ids = Number::from_slice_to_vec(ids);
         let params = json!({
             "notes": ids
@@ -521,7 +512,7 @@ impl NotesProxy {
             .version(self.version)
             .params(Some(params))
             .build()?;
-        self.post_generic_request(payload).await
+        self.post_generic_request(payload)
     }
 }
 
@@ -534,51 +525,47 @@ mod note_tests {
         test_utils::ANKICLIENT,
     };
 
-    #[tokio::test]
-    async fn query_note_ids() {
+    #[test]
+    fn query_note_ids() {
         let res = ANKICLIENT
             .notes()
             .find_notes(AnkiQuery::CardState(CardState::IsNew))
-            .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
         assert!(!res.is_empty());
         let res = ANKICLIENT
             .notes()
             .find_notes(AnkiQuery::CardState(CardState::IsLearn))
-            .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
         assert!(!res.is_empty())
     }
 
-    #[tokio::test]
-    async fn get_notes_infos() {
+    #[test]
+    fn get_notes_infos() {
         ANKICLIENT
             .notes()
             .get_notes_infos(&[12345])
-            .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
     }
 
-    #[tokio::test]
+    #[test]
     #[ignore]
-    async fn gui_edit_note() {
+    fn gui_edit_note() {
         ANKICLIENT
             .notes()
             .gui_edit(1749686091185 as usize)
-            .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
     }
 
-    #[tokio::test]
+    #[test]
     #[ignore]
-    async fn add_notes() -> AnkiResult<()> {
+    fn add_notes() -> AnkiResult<()> {
         let ac = &ANKICLIENT;
-        if let Ok(ids) = ac.notes().find_notes("偽者扱い".into()).await {
-            ac.notes().delete_notes_by_ids(&ids).await?;
+        if let Ok(ids) = ac.notes().find_notes("偽者扱い".into()) {
+            ac.notes().delete_notes_by_ids(&ids)?;
         }
         let audio = MediaBuilder::create_empty()
             .filename("偽物扱い.mp3".into())
@@ -595,7 +582,7 @@ mod note_tests {
             .build()?;
 
         let mut note_builder = NoteBuilder::create_empty();
-        let note_futures = vec![note_builder
+        let notes: Vec<_> = vec![note_builder
             .model_name("aramrw".into())
             .deck_name("新文を採れた".into())
             .field("wordDictionaryForm", "偽者扱い")
@@ -608,16 +595,11 @@ mod note_tests {
             .tags(vec!["anki-direct".into()])
             .audios(vec![audio])
             .pictures(vec![image])
-            .build(Some(ac.reqwest_client()))];
+            .build(Some(ac.reqwest_client()))?];
 
-        let notes: Vec<_> = futures::future::join_all(note_futures).await;
-        let notes = notes
-            .into_iter()
-            .map(|res| res.unwrap())
-            .collect::<Vec<_>>();
-
-        let new_ids = ac.notes().add_notes(&notes).await?;
-        ac.notes().gui_edit(*new_ids.first().unwrap()).await?;
+        let new_ids = ac.notes().add_notes(&notes)?;
+        ac.notes().gui_edit(*new_ids.first().unwrap())?;
         Ok(())
     }
 }
+

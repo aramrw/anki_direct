@@ -39,11 +39,11 @@ where
 impl DeckCache<String> {
     /// Only hydrates [DeckCache] with newly found deck names, leaves all [DeckConfig]s unchanged.
     /// Useful when you only need updated deck names to make notes with.
-    pub async fn hydrate_names(&mut self) -> AnkiResult<&mut Self> {
+    pub fn hydrate_names(&mut self) -> AnkiResult<&mut Self> {
         let Some(modules) = &self.modules else {
             return Err(AnkiError::Cache(CacheError::Dehydrated));
         };
-        let latest: IndexMap<String, Number> = modules.decks.get_all_deck_names_and_ids().await?;
+        let latest: IndexMap<String, Number> = modules.decks.get_all_deck_names_and_ids()?;
         for (name, _) in latest {
             if !self.cache.contains_key(&name) {
                 self.cache.insert(name, None);

@@ -54,7 +54,7 @@ impl Backend {
     /// let payload = NoteAction {..};
     /// let res: Result<Vec<isize>> = self.post_generic_request::<Vec<isize>>(payload).await
     /// ```
-    pub async fn post_generic_request<T: DeserializeOwned + Debug>(
+    pub fn post_generic_request<T: DeserializeOwned + Debug>(
         &self,
         payload: impl Serialize,
     ) -> Result<T, AnkiError> {

@@ -9,7 +9,7 @@ use crate::{
 };
 use getset::{Getters, MutGetters, Setters};
 use serde::{Deserialize, Serialize};
-use std::{hash::Hash, sync::Arc};
+use std::sync::Arc;
 use thiserror::Error;
 
 type Mod = Option<Arc<AnkiModules>>;
@@ -54,8 +54,8 @@ impl Cache {
     }
 
     /// Fetches the latest data for all managed caches from Anki.
-    pub async fn update_all(&mut self) -> AnkiResult<()> {
-        self.models_mut().hydrate().await?;
+    pub fn update_all(&mut self) -> AnkiResult<()> {
+        self.models_mut().hydrate()?;
         Ok(())
     }
 

@@ -8,7 +8,6 @@ use crate::{
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, hash::Hash, ops::Deref, sync::Arc};
-use thiserror::Error;
 
 /// A generic cache for Anki models, allowing the user to specify the key type.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -40,12 +39,11 @@ where
 impl ModelCache<String> {
     /// Hydrates [ModelCache] to use latest models from `Anki`.
     /// The existing data in the cache will be replaced.
-    pub async fn hydrate(&mut self) -> AnkiResult<&mut Self> {
+    pub fn hydrate(&mut self) -> AnkiResult<&mut Self> {
         let Some(modules) = &self.modules else {
             return Err(AnkiError::Cache(CacheError::Dehydrated));
         };
-        let latest: IndexMap<String, FullModelDetails> =
-            modules.models.get_all_models_full().await?;
+        let latest: IndexMap<String, FullModelDetails> = modules.models.get_all_models_full()?;
 
         self.cache = latest;
         Ok(self)

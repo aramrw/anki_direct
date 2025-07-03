@@ -1,7 +1,6 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 
 use derive_builder::Builder;
-use futures::future::try_join_all;
 use indexmap::IndexMap;
 use num_traits::PrimInt;
 use serde::{Deserialize, Serialize};
@@ -9,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::AnkiError,
     generic::{GenericRequest, GenericRequestBuilder},
-    notes::NoteBuilder,
     ModelsProxy, Number,
 };
 
@@ -95,9 +93,7 @@ pub enum ModelDetails {
     Full(FullModelDetails),
 }
 
-trait IntoNoteBuilder {
-    fn note_builder(&self) -> NoteBuilder;
-}
+
 
 /// Version of [FullModelDetails] that excludes the `templates` & `styling` fields
 /// It's recommended to use this as `<T>` if you only need the name and fields as it doesn't need to make extra requests
@@ -224,14 +220,14 @@ struct ModelNameParams {
 impl ModelsProxy {
     /// Returns: `Map<(name, id)>`
     /// `See:` [ankiconnect/modelNamesAndIds](https://git.sr.ht/~foosoft/anki-connect#codemodelnamesandidscode)
-    async fn get_all_model_names_and_ids(&self) -> Result<IndexMap<String, Number>, AnkiError> {
+    fn get_all_model_names_and_ids(&self) -> Result<IndexMap<String, Number>, AnkiError> {
         type ModelsResult = IndexMap<String, Number>;
         let payload: GenericRequest<()> = GenericRequestBuilder::default()
             .action("modelNamesAndIds".into())
             .version(self.version)
             .build()
             .unwrap();
-        self.post_generic_request::<ModelsResult>(payload).await
+        self.post_generic_request::<ModelsResult>(payload)
     }
 
     /// Get all models found in current anki session.
@@ -257,16 +253,16 @@ impl ModelsProxy {
     ///     }
     /// }
     /// ```
-    pub async fn get_all_models_less(
+    pub fn get_all_models_less(
         &self,
     ) -> Result<IndexMap<String, LessModelDetails>, AnkiError> {
-        let indexmap = self.get_all_model_names_and_ids().await?;
-        let futures = indexmap
+        let indexmap = self.get_all_model_names_and_ids()?;
+        let details: Result<Vec<LessModelDetails>, AnkiError> = indexmap
             .into_iter()
-            .map(move |(name, _id)| self.get_less_model_details_by_name(name.into()));
-        let details = try_join_all(futures.into_iter()).await?;
+            .map(move |(name, _id)| self.get_less_model_details_by_name(name.into()))
+            .collect();
         let res: IndexMap<String, LessModelDetails> =
-            details.into_iter().map(|d| (d.name.clone(), d)).collect();
+            details?.into_iter().map(|d| (d.name.clone(), d)).collect();
         Ok(res)
     }
 
@@ -293,22 +289,22 @@ impl ModelsProxy {
     ///     }
     /// }
     /// ```
-    pub async fn get_all_models_full(
+    pub fn get_all_models_full(
         &self,
     ) -> Result<IndexMap<String, FullModelDetails>, AnkiError> {
-        let indexmap = self.get_all_model_names_and_ids().await?;
-        let futures = indexmap
+        let indexmap = self.get_all_model_names_and_ids()?;
+        let details: Result<Vec<FullModelDetails>, AnkiError> = indexmap
             .into_iter()
-            .map(move |(name, _id)| self.get_full_model_details_by_name(name.into()));
-        let details = try_join_all(futures.into_iter()).await?;
+            .map(move |(name, _id)| self.get_full_model_details_by_name(name.into()))
+            .collect();
         let res: IndexMap<String, FullModelDetails> =
-            details.into_iter().map(|d| (d.name.clone(), d)).collect();
+            details?.into_iter().map(|d| (d.name.clone(), d)).collect();
         Ok(res)
     }
 
     /// Fetches the complete list of field names for the provided model name.
     /// https://git.sr.ht/~foosoft/anki-connect#codemodelfieldnamescode
-    pub async fn get_model_field_names(&self, model_name: &str) -> Result<Vec<String>, AnkiError> {
+    pub fn get_model_field_names(&self, model_name: &str) -> Result<Vec<String>, AnkiError> {
         let params = ModelNameParams {
             model_name: model_name.to_string(),
         };
@@ -318,12 +314,12 @@ impl ModelsProxy {
             .params(Some(params))
             .build()
             .unwrap();
-        self.post_generic_request(payload).await
+        self.post_generic_request(payload)
     }
 
     /// Fetches the card templates for the provided model name.
     /// Corresponds to the "modelTemplates" action.
-    pub async fn get_model_templates(&self, model_name: &str) -> Result<ModelTemplates, AnkiError> {
+    pub fn get_model_templates(&self, model_name: &str) -> Result<ModelTemplates, AnkiError> {
         let params = ModelNameParams {
             model_name: model_name.to_string(),
         };
@@ -333,12 +329,12 @@ impl ModelsProxy {
             .params(Some(params))
             .build()
             .unwrap();
-        self.post_generic_request(payload).await
+        self.post_generic_request(payload)
     }
 
     /// Fetches the CSS styling and cloze status for the provided model name.
     /// Corresponds to the "modelStyling" action.
-    pub async fn get_model_styling(&self, model_name: &str) -> Result<ModelStyling, AnkiError> {
+    pub fn get_model_styling(&self, model_name: &str) -> Result<ModelStyling, AnkiError> {
         let params = ModelNameParams {
             model_name: model_name.to_string(),
         };
@@ -348,23 +344,21 @@ impl ModelsProxy {
             .params(Some(params))
             .build()
             .unwrap();
-        self.post_generic_request(payload).await
+        self.post_generic_request(payload)
     }
 
     /// Fetches all the details for a model by concurrently calling:
     /// [Self::get_model_field_names]
     /// [Self::get_model_templates]
     /// [Self::get_model_styling]
-    pub async fn get_full_model_details_by_name(
+    pub fn get_full_model_details_by_name(
         &self,
         model_name: Cow<'_, str>,
     ) -> Result<FullModelDetails, AnkiError> {
         let model_name = model_name.into_owned();
-        let (fields, templates, styling) = tokio::try_join!(
-            self.get_model_field_names(&model_name),
-            self.get_model_templates(&model_name),
-            self.get_model_styling(&model_name)
-        )?;
+        let fields = self.get_model_field_names(&model_name)?;
+        let templates = self.get_model_templates(&model_name)?;
+        let styling = self.get_model_styling(&model_name)?;
 
         Ok(FullModelDetails {
             name: model_name.to_string(),
@@ -374,11 +368,11 @@ impl ModelsProxy {
         })
     }
 
-    pub async fn get_less_model_details_by_name(
+    pub fn get_less_model_details_by_name(
         &self,
         model_name: Cow<'_, str>,
     ) -> Result<LessModelDetails, AnkiError> {
-        let fields = self.get_model_field_names(&model_name).await?;
+        let fields = self.get_model_field_names(&model_name)?;
         Ok(LessModelDetails {
             name: model_name.into_owned(),
             fields,
@@ -390,51 +384,47 @@ impl ModelsProxy {
 mod modeltests {
     use crate::{error::AnkiResult, test_utils::ANKICLIENT};
 
-    #[tokio::test]
-    async fn get_all_model_names_and_ids() {
+    #[test]
+    fn get_all_model_names_and_ids() {
         let res = ANKICLIENT
             .models()
             .get_all_model_names_and_ids()
-            .await
             .unwrap();
         assert!(!res.is_empty());
         dbg!(res);
     }
 
-    #[tokio::test]
-    async fn get_full_model_details() {
+    #[test]
+    fn get_full_model_details() {
         let res = ANKICLIENT
             .models()
             .get_all_model_names_and_ids()
-            .await
             .unwrap();
         assert!(!res.is_empty());
         let first = res.first().unwrap();
         let res = ANKICLIENT
             .models()
             .get_full_model_details_by_name(first.0.into())
-            .await
             .map_err(|e| e.pretty_panic())
             .unwrap();
         dbg!(res);
     }
 
-    #[tokio::test]
-    async fn get_less_model_details() -> AnkiResult<()> {
-        let res = ANKICLIENT.models().get_all_model_names_and_ids().await?;
+    #[test]
+    fn get_less_model_details() -> AnkiResult<()> {
+        let res = ANKICLIENT.models().get_all_model_names_and_ids()?;
         assert!(!res.is_empty());
         let first = res.first().unwrap();
         let res = ANKICLIENT
             .models()
-            .get_less_model_details_by_name(first.0.into())
-            .await?;
+            .get_less_model_details_by_name(first.0.into())?;
         dbg!(res);
         Ok(())
     }
 
-    #[tokio::test]
-    async fn get_all_models_less() {
-        let res = ANKICLIENT.models().get_all_models_less().await.unwrap();
+    #[test]
+    fn get_all_models_less() {
+        let res = ANKICLIENT.models().get_all_models_less().unwrap();
         assert!(!res.is_empty());
         dbg!(res);
     }

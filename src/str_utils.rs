@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Dealing with string indices can be hard, this struct ensures that both the
 /// character and byte index are provided for correct indexing.
 #[derive(Debug, Default, PartialEq, Eq)]
