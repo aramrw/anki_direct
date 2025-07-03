@@ -7,7 +7,7 @@ use crate::{
     DecksProxy, Number,
 };
 
-/// https://git.sr.ht/~foosoft/anki-connect#codegetdeckconfigcode
+/// <https://git.sr.ht/~foosoft/anki-connect#codegetdeckconfigcode>
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeckConfig {
     id: Number,

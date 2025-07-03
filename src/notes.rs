@@ -199,7 +199,7 @@ impl NoteBuilder {
     ///
     /// # Information
     /// [MediaSource::Url] => Downloads verified [url::Url] data & converts to [base64].
-    /// [MediaSource::Path] => Calls [tokio::fs::read] on the [PathBuf].
+    /// [MediaSource::Path] => Calls [std::fs::read] on the [PathBuf].
     /// [MediaSource::Data] => Returns the data directly. Expected that the bytes are [base64]
     /// encoded. Should return an error later by checking encoding.
     ///

@@ -23,7 +23,7 @@ impl From<&str> for AnkiQuery {
     }
 }
 
-/// https://docs.ankiweb.net/searching.html#card-state
+/// <https://docs.ankiweb.net/searching.html#card-state>
 #[derive(Clone, Copy, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum CardState {

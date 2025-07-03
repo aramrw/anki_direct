@@ -5,7 +5,7 @@ pub mod anki;
 pub mod cache;
 pub mod decks;
 pub mod error;
-mod generic;
+pub mod generic;
 pub mod model;
 pub mod notes;
 pub mod result;
@@ -35,9 +35,9 @@ pub struct AnkiClient {
     cache: Cache,
 }
 impl AnkiClient {
-    /// Creates a new [AnkiClient] with the specified port.
-    /// If `ankiconnect` isn't open\running on the port, returns `Err(`[AnkiError::ConnectionNotFound]`)`
-    /// Has `_auto` prefix meaning it gets the version from [ankiconnect](https://git.sr.ht/~foosoft/anki-connect)
+    /// Creates a new [AnkiClient] with the specified port, automatically detecting the AnkiConnect version.
+    /// If `ankiconnect` isn't open or running on the port, returns `Err(`[AnkiError::ConnectionNotFound]`)`.
+    ///
     /// # Parameters
     ///
     /// * `port`: The port where `ankiconnect` is running.
@@ -45,11 +45,11 @@ impl AnkiClient {
     /// # Example
     ///
     /// ```no_run
-    /// // ankiconnect's default is "8765"
-    /// let client = Backend::new("8765");
+    /// // AnkiConnect's default is "8765"
+    /// let client = AnkiClient::new_port("8765");
     /// ```
-    pub fn new_auto(port: &str) -> AnkiResult<Self> {
-        let backend = Arc::new(Backend::new(port)?);
+    pub fn new_port(port: &str) -> AnkiResult<Self> {
+        let backend = Arc::new(Backend::new_port(port)?);
         let modules = Arc::new(AnkiModules::new(backend.clone()));
         Ok(Self {
             backend: backend.clone(),
@@ -58,12 +58,44 @@ impl AnkiClient {
             cache: Cache::init(modules),
         })
     }
-    /// This fn is not `async` so you can initialize it in statics.
+
+    /// Creates a new [AnkiClient] with the default port ("8765"), automatically detecting the AnkiConnect version.
+    /// If `ankiconnect` isn't open or running, returns `Err(`[AnkiError::ConnectionNotFound]`)`.
     ///
-    /// `Note`: Not `async` because it doesn't check versions or make requests,
-    /// so the first query could error if ankiconnect is not open, or the version is not correct.
-    pub fn new_sync(port: &str, version: u8) -> Self {
-        let backend = Arc::new(Backend::new_sync(port, version));
+    /// # Example
+    ///
+    /// ```no_run
+    /// let client = AnkiClient::default_latest();
+    /// ```
+    pub fn default_latest() -> AnkiResult<Self> {
+        let backend = Arc::new(Backend::default_latest()?);
+        let modules = Arc::new(AnkiModules::new(backend.clone()));
+        Ok(Self {
+            backend: backend.clone(),
+            modules: modules.clone(),
+            #[cfg(feature = "cache")]
+            cache: Cache::init(modules),
+        })
+    }
+
+    /// Creates a new [AnkiClient] with the specified port and a hardcoded version.
+    /// This function does not perform any checks for AnkiConnect availability or version compatibility.
+    /// It is suitable for static initialization where the AnkiConnect instance is guaranteed to be running
+    /// on the specified port and version.
+    ///
+    /// # Parameters
+    ///
+    /// * `port`: The port where `ankiconnect` is expected to be running.
+    /// * `version`: The expected API version of AnkiConnect.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// // Create an AnkiClient for AnkiConnect on port 8765 with API version 6
+    /// let client = AnkiClient::new_port_version("8765", 6);
+    /// ```
+    pub fn new_port_version(port: &str, version: u8) -> Self {
+        let backend = Arc::new(Backend::new_port_version(port, version));
         let modules = Arc::new(AnkiModules::new(backend.clone()));
         Self {
             backend: backend.clone(),
@@ -72,6 +104,8 @@ impl AnkiClient {
             cache: Cache::init(modules),
         }
     }
+
+    
     pub fn notes(&self) -> &NotesProxy {
         &self.modules.notes
     }
@@ -178,23 +212,22 @@ impl PartialEq for Backend {
 impl Eq for Backend {}
 
 impl Default for Backend {
-    /// Sync fn that is the same as [Self::default_auto()]
-    /// except it also hardcodes the version as 6.
+    /// Creates a new `Backend` with the default port ("8765") and a hardcoded version of 6.
+    /// This is a synchronous function and does not check for AnkiConnect availability or version compatibility.
     ///
-    /// `Note`: Not `async` because it doesn't check versions or make requests,
-    /// so the first query could error if ankiconnect is not open, or the version is not `6`.
+    /// # Example
+    ///
+    /// ```
+    /// let backend = Backend::default();
+    /// ```
     fn default() -> Self {
-        Self {
-            endpoint: Self::format_url("8765"),
-            client: BlockingClient::new(),
-            version: 6,
-        }
+        Self::new_port_version("8765", 6)
     }
 }
 
 impl Backend {
-    /// Creates a new `Backend` with the specified port.
-    /// Returns an `Err(`[AnkiError::ConnectionNotFound]`)` if anki isn't open.
+    /// Creates a new `Backend` with the specified port, automatically detecting the AnkiConnect version.
+    /// Returns an `Err(`[AnkiError::ConnectionNotFound]`)` if AnkiConnect isn't open or reachable on the given port.
     ///
     /// # Parameters
     ///
@@ -203,10 +236,10 @@ impl Backend {
     /// # Example
     ///
     /// ```no_run
-    /// // ankiconnect's default is "8765"
-    /// let client = Backend::new("8765");
+    /// // AnkiConnect's default port is "8765"
+    /// let backend = Backend::new_port("8765");
     /// ```
-    pub fn new(port: &str) -> Result<Self, AnkiError> {
+    pub fn new_port(port: &str) -> Result<Self, AnkiError> {
         let client = BlockingClient::new();
         let endpoint = Self::format_url(port);
         let version = Backend::get_version_internal(&client, &endpoint)?;
@@ -218,20 +251,36 @@ impl Backend {
         Ok(ac)
     }
 
-    /// Creates a new `Backend` with a port of "8765".
-    /// This is the same as calling:
+    /// Creates a new `Backend` with the default port ("8765"), automatically detecting the AnkiConnect version.
+    /// This is equivalent to calling `Backend::new_port("8765")`.
+    /// Returns an `Err(`[AnkiError::ConnectionNotFound]`)` if AnkiConnect isn't open or reachable.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// let backend = Backend::default_latest();
     /// ```
-    /// let client = Backend::new("8765");
-    /// ```
-    pub fn default_auto() -> Result<Self, AnkiError> {
-        Self::new("8765")
+    pub fn default_latest() -> Result<Self, AnkiError> {
+        Self::new_port("8765")
     }
 
-    /// This fn is not `async` so you can initialize it in statics.
+    /// Creates a new `Backend` with the specified port and a hardcoded version.
+    /// This function does not perform any checks for AnkiConnect availability or version compatibility.
+    /// It is suitable for static initialization where the AnkiConnect instance is guaranteed to be running
+    /// on the specified port and version.
     ///
-    /// `Note`: Not `async` because it doesn't check versions or make requests,
-    /// so the first query could error if ankiconnect is not open, or the version is not correct.
-    pub fn new_sync(port: &str, version: u8) -> Self {
+    /// # Parameters
+    ///
+    /// * `port`: The port where AnkiConnect is expected to be running.
+    /// * `version`: The expected API version of AnkiConnect.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// // Create a backend for AnkiConnect on port 8765 with API version 6
+    /// let backend = Backend::new_port_version("8765", 6);
+    /// ```
+    pub fn new_port_version(port: &str, version: u8) -> Self {
         Self {
             endpoint: Self::format_url(port),
             client: BlockingClient::new(),

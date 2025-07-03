@@ -303,7 +303,7 @@ impl ModelsProxy {
     }
 
     /// Fetches the complete list of field names for the provided model name.
-    /// https://git.sr.ht/~foosoft/anki-connect#codemodelfieldnamescode
+    /// <https://git.sr.ht/~foosoft/anki-connect#codemodelfieldnamescode>
     pub fn get_model_field_names(&self, model_name: &str) -> Result<Vec<String>, AnkiError> {
         let params = ModelNameParams {
             model_name: model_name.to_string(),
