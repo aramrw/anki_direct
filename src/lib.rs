@@ -14,14 +14,12 @@ mod test_utils;
 
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
-use derive_where::derive_where;
 use error::{AnkiError, CustomSerdeError};
 use getset::{Getters, MutGetters};
 use num_traits::PrimInt;
-use reqwest::Client;
+use reqwest::blocking::Client as BlockingClient;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use thiserror::Error;
 
 #[cfg(feature = "cache")]
 use crate::cache::Cache;
@@ -81,7 +79,7 @@ impl AnkiClient {
         &self.modules.models
     }
     /// Returns a reference to a reqwest client if needed.
-    pub fn reqwest_client(&self) -> &Client {
+    pub fn reqwest_client(&self) -> &BlockingClient {
         &self.backend.client
     }
 }
@@ -165,7 +163,7 @@ impl Deref for AnkiClient {
 #[derive(Clone, Debug)]
 pub struct Backend {
     pub endpoint: String,
-    pub client: Client,
+    pub client: BlockingClient,
     pub version: u8,
 }
 
@@ -188,7 +186,7 @@ impl Default for Backend {
     fn default() -> Self {
         Self {
             endpoint: Self::format_url("8765"),
-            client: Client::new(),
+            client: BlockingClient::new(),
             version: 6,
         }
     }
@@ -209,7 +207,7 @@ impl Backend {
     /// let client = Backend::new("8765");
     /// ```
     pub async fn new(port: &str) -> Result<Self, AnkiError> {
-        let client = Client::new();
+        let client = BlockingClient::new();
         let endpoint = Self::format_url(port);
         let version = Backend::get_version_internal(&client, &endpoint).await?;
         let ac = Self {
@@ -236,7 +234,7 @@ impl Backend {
     pub fn new_sync(port: &str, version: u8) -> Self {
         Self {
             endpoint: Self::format_url(port),
-            client: Client::new(),
+            client: BlockingClient::new(),
             version,
         }
     }
@@ -257,12 +255,12 @@ impl Backend {
     }
 
     /// makes a get request to ankiconnect to get its version
-    pub async fn get_version_internal(c: &Client, url: &str) -> Result<u8, AnkiError> {
-        let res = match c.get(url).send().await {
+    pub async fn get_version_internal(c: &BlockingClient, url: &str) -> Result<u8, AnkiError> {
+        let res = match c.get(url).send() {
             Ok(response) => response,
             Err(_) => return Err(AnkiError::ConnectionNotFound(url.to_string())),
         };
-        let val: Value = res.json().await.unwrap();
+        let val: Value = res.json().unwrap();
         let Some(res) = val.as_object() else {
             let cse = CustomSerdeError::expected(None, val, None);
             return Err(AnkiError::CustomSerde(cse));

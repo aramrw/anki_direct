@@ -7,7 +7,7 @@ use crate::{NotesProxy, Number};
 use derive_builder::Builder;
 use indexmap::IndexMap;
 use num_traits::PrimInt;
-use reqwest::Client;
+use reqwest::blocking::Client as BlockingClient;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_with::base64::Base64;
@@ -157,7 +157,7 @@ impl NoteBuilder {
     /// downloading
     async fn convert_media_fields_to_bytes(
         &mut self,
-        client: Option<&Client>,
+        client: Option<&BlockingClient>,
     ) -> AnkiResult<&mut Self> {
         // Convert media sources to bytes
         if let Some(Some(audios)) = &mut self.audios {
@@ -205,7 +205,7 @@ impl NoteBuilder {
     ///
     /// If you created all media using builder using only `data` field directly,
     /// it will not make any internal requests.
-    pub async fn build(&mut self, client: Option<&Client>) -> AnkiResult<Note> {
+    pub async fn build(&mut self, client: Option<&BlockingClient>) -> AnkiResult<Note> {
         // populates a new Note
         let mut note = Note::default();
         // Ensure that the anki fields is set
@@ -286,7 +286,7 @@ impl MediaSource {
     /// - Directly return the data if type is already [MediaSource::Data]
     /// - Download the bytes from a URL if the variant is [MediaSource::Url]
     /// - Read the data from a local file if the variant is [MediaSource::Path]
-    pub async fn to_data(&self, client: Option<&Client>) -> Result<Vec<u8>, AnkiError> {
+    pub async fn to_data(&self, client: Option<&BlockingClient>) -> Result<Vec<u8>, AnkiError> {
         match self {
             // Variant 1: The data is already here.
             // We just need to clone it to return an owned Vec<u8>.
@@ -297,10 +297,10 @@ impl MediaSource {
                 println!("Downloading from URL: {url}");
                 let client = match client {
                     Some(ac) => ac,
-                    None => &Client::new(),
+                    None => &BlockingClient::new(),
                 };
-                let response = client.get(url).send().await?;
-                let bytes = response.bytes().await?;
+                let response = client.get(url).send()?;
+                let bytes = response.bytes()?;
                 Ok(bytes.to_vec())
             }
 
@@ -371,7 +371,7 @@ impl Media {
     /// # Reason
     /// Avoids AnkiConnect download by preparing data before sending.
     /// Only base64 encoded data is passed to AnkiConnect.
-    pub async fn data(&mut self, client: Option<&Client>) -> AnkiResult<&mut Self> {
+    pub async fn data(&mut self, client: Option<&BlockingClient>) -> AnkiResult<&mut Self> {
         // Try to extract data from available sources
         let bytes = match (&mut self.url, &mut self.path, &self.data) {
             (Some(url), _, _) => url.to_data(client).await?,

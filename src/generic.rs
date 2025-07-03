@@ -59,12 +59,12 @@ impl Backend {
         payload: impl Serialize,
     ) -> Result<T, AnkiError> {
         let (client, endpoint) = (&self.client, &self.endpoint);
-        let res = match client.post(endpoint).json(&payload).send().await {
+        let res = match client.post(endpoint).json(&payload).send() {
             Ok(response) => response,
             Err(e) => return Err(AnkiError::RequestError(e.to_string())),
         };
 
-        let mut val: Value = res.json().await?;
+        let mut val: Value = res.json()?;
         if let Some(result_array) = val.get_mut("result").and_then(|r| r.as_array_mut()) {
             result_array.retain(|item| {
                 match item.as_object() {
