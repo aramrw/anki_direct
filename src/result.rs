@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NumVecRes {
@@ -20,5 +20,5 @@ pub struct NotesInfoData {
     pub noteId: u128,
     pub modelName: String,
     pub tags: Vec<String>,
-    pub fields: HashMap<String, FieldData>,
+    pub fields: IndexMap<String, FieldData>,
 }

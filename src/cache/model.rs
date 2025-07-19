@@ -11,6 +11,17 @@ use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, hash::Hash, ops::Deref, sync::Arc};
 
 /// A generic cache for Anki models, allowing the user to specify the key type.
+///
+/// # Serialization
+///
+/// This struct can be serialized. However, the `modules` field, which holds the live
+/// connection to Anki, is skipped during serialization (`#[serde(skip)]`).
+///
+/// After deserializing, the cache will be "dehydrated" and must be re-hydrated with a
+/// new connection to perform any operations that fetch data from Anki.
+///
+/// For a complete explanation and example of the serialization/hydration workflow,
+/// please see the main [`cache` module documentation](super).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModelCache<K>
 where
@@ -26,7 +37,7 @@ impl<K> ModelCache<K>
 where
     K: Hash + Eq,
 {
-    /// Creates a new, empty model cache.
+    /// Creates a new, empty model cache with a live connection.
     pub fn new(modules: Arc<AnkiModules>) -> Self {
         Self {
             modules: modules.into(),
@@ -36,10 +47,13 @@ where
 }
 
 /// This implementation is only available when the key `K` is a `String`.
-/// It provides the `update` method which fetches data from the AnkiConnect API.
+/// It provides methods that fetch data from the AnkiConnect API.
 impl ModelCache<String> {
-    /// Hydrates [ModelCache] to use latest models from `Anki`.
-    /// The existing data in the cache will be replaced.
+    /// Fetches all models from Anki and replaces the existing cache with the latest data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CacheError::Dehydrated`](super::CacheError::Dehydrated) if the cache does not have a live connection.
     pub fn hydrate(&mut self) -> AnkiResult<&mut Self> {
         let Some(modules) = &self.modules else {
             return Err(AnkiError::Cache(CacheError::Dehydrated));

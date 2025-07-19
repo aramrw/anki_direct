@@ -233,6 +233,10 @@ impl AnkiClient {
         &self.modules.models
     }
 
+    pub fn misc(&self) -> &MiscProxy {
+        &self.modules.misc
+    }
+
     /// Provides access to deck-related AnkiConnect API calls.
     ///
     /// # Examples
@@ -262,6 +266,14 @@ impl AnkiClient {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MiscProxy(Arc<Backend>);
+impl MiscProxy {
+    pub fn get_version(&self) -> AnkiResult<u8> {
+        Backend::get_version_internal(&self.0.client, &self.0.endpoint)
+    }
+}
+
 /// `AnkiModules` is an internal struct that holds references to the various API modules
 /// (notes, models, decks) and the shared `Backend`.
 /// It's primarily used internally by `AnkiClient` to organize and provide access to
@@ -273,6 +285,8 @@ pub struct AnkiModules {
     models: ModelsProxy,
     #[getset(get = "pub")]
     decks: DecksProxy,
+    #[getset(get = "pub")]
+    misc: MiscProxy,
 }
 impl PartialEq for AnkiModules {
     fn eq(&self, other: &Self) -> bool {
@@ -288,6 +302,7 @@ impl AnkiModules {
             notes: NotesProxy(backend.clone()),
             models: ModelsProxy(backend.clone()),
             decks: DecksProxy(backend.clone()),
+            misc: MiscProxy(backend.clone()),
         }
     }
 }
@@ -470,7 +485,7 @@ impl Backend {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// use anki_direct::Backend;
     /// let url = Backend::format_url("8765");
     /// ```
@@ -528,5 +543,16 @@ impl Deref for Number {
     type Target = isize;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod misc {
+    use crate::test_utils::ANKICLIENT;
+
+    #[test]
+    fn version() {
+        let version = ANKICLIENT.misc().get_version().unwrap();
+        assert_eq!(version, 6);
     }
 }

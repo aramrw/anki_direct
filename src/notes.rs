@@ -207,29 +207,43 @@ impl NoteBuilder {
     ///
     /// If you created all media using builder using only `data` field directly,
     /// it will not make any internal requests.
-    pub fn build(&mut self, client: Option<&BlockingClient>) -> AnkiResult<Note> {
-        // populates a new Note
-        let mut note = Note::default();
-        // Ensure that the anki fields is set
-        self.is_field_uninitialized::<_>(&self.fields, "fields")?;
-        note.fields = self.fields.take().unwrap();
+    pub fn build(&mut self, client: Option<&reqwest::blocking::Client>) -> AnkiResult<Note> {
+        let deck_name =
+            self.deck_name
+                .take()
+                .filter(|s| !s.is_empty())
+                .ok_or(AnkiError::Builder(BuilderErrors::Note(
+                    NoteBuilderError::UninitializedField("deck_name"),
+                )))?;
 
-        // Ensure that the deck name is set
-        self.is_field_uninitialized::<_>(&self.deck_name, "deck_name")?;
-        note.deck_name = self.deck_name.take().unwrap();
+        let model_name =
+            self.model_name
+                .take()
+                .filter(|s| !s.is_empty())
+                .ok_or(AnkiError::Builder(BuilderErrors::Note(
+                    NoteBuilderError::UninitializedField("model_name"),
+                )))?;
 
-        // Ensure that the model name is set
-        self.is_field_uninitialized::<_>(&self.model_name, "model_name")?;
-        note.model_name = self.model_name.take().unwrap();
+        let fields = self
+            .fields
+            .take()
+            .filter(|m| !m.is_empty())
+            .ok_or(AnkiError::Builder(BuilderErrors::Note(
+                NoteBuilderError::UninitializedField("fields"),
+            )))?;
 
-        // final step: convert media sources to bytes
         self.convert_media_fields_to_bytes(client)?;
 
-        note.audios = self.audios.take().flatten();
-        note.videos = self.videos.take().flatten();
-        note.pictures = self.pictures.take().flatten();
-        note.tags = self.tags.take().flatten();
-        note.options = self.options.take().flatten();
+        let note = Note {
+            deck_name,
+            model_name,
+            fields,
+            options: self.options.take().flatten(),
+            tags: self.tags.take().flatten(),
+            audios: self.audios.take().flatten(),
+            videos: self.videos.take().flatten(),
+            pictures: self.pictures.take().flatten(),
+        };
 
         Ok(note)
     }
