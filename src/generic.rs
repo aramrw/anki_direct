@@ -84,6 +84,10 @@ impl Backend {
             AnkiError::CustomSerde(cse)
         })?;
         if let Some(err) = body.error {
+            // AnkiConnect("['cannot create note because it is a duplicate']")
+            if err.contains("duplicate") {
+                return Err(AnkiError::Duplicate)
+            }
             return Err(AnkiError::AnkiConnect(err));
         }
         Ok(body.result)

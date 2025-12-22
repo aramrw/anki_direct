@@ -44,6 +44,9 @@ impl From<MediaBuilderError> for AnkiError {
 /// anki error
 #[derive(Debug, Error)]
 pub enum AnkiError {
+    // hardcoded from AnkiConnect string error
+    #[error("note is a duplicate")]
+    Duplicate,
     #[error("[error/anki-connect]: {0}")]
     AnkiConnect(String),
     #[error("no data found")]
