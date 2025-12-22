@@ -10,9 +10,12 @@ pub static ANKICLIENT: LazyLock<AnkiClient> = LazyLock::new(AnkiClient::default)
 #[ignore]
     fn add_notes() -> AnkiResult<()> {
         let ac = &ANKICLIENT;
+        // check if a note exists
         if let Ok(ids) = ac.notes().find_notes("偽者扱い".into()) {
+            // if it exists, delete by id 
             ac.notes().delete_notes_by_ids(&ids)?;
         }
+
         let audio = MediaBuilder::create_empty()
             .filename("偽物扱い.mp3".into())
             .fields(vec!["sentenceAudio".into()])
