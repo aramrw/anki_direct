@@ -115,9 +115,13 @@ impl<T> CollectionExt for Option<IndexMap<T, T>> {
 #[builder(setter(strip_option))]
 #[builder(build_fn(skip))]
 pub struct Note {
+    /// target deck
     deck_name: String,
+    /// the note model
     model_name: String,
     #[builder(setter(custom))]
+    /// # Example
+    /// note.fields().get("wordDictionaryForm", "idk")
     fields: IndexMap<String, String>,
     #[builder(default)]
     options: Option<NoteOptions>,
@@ -132,6 +136,11 @@ pub struct Note {
     #[builder(default)]
     #[serde(rename = "picture")]
     pictures: Option<Vec<Media>>,
+}
+impl Note {
+    pub fn fields(&self) -> &IndexMap<String, String> {
+        &self.fields
+    }
 }
 
 impl NoteBuilder {
