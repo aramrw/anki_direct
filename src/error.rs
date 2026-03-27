@@ -4,10 +4,14 @@ use std::error::Error;
 use std::fmt::Display;
 //use std::collections::HashMap;
 
+/// `AnkiError` is an enum that represents possible errors that can occur when communicating with Anki.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum AnkiError {
+    /// No data was found for the query.
     NoDataFound,
+    /// An error occurred during the request.
     RequestError(String),
+    /// An error occurred while parsing the response.
     ParseError(String),
 }
 
@@ -23,6 +27,7 @@ impl Display for AnkiError {
     }
 }
 
+/// Formats an error message with a title.
 pub fn format_error(title: &str, error: String) -> String {
     format!("{title}: {error}")
 }

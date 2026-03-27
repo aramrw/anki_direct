@@ -42,6 +42,9 @@ pub struct NotesInfoParams {
     pub notes: Vec<u128>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct NoParams {}
+
 // other
 #[derive(Serialize, Deserialize)]
 pub struct ConfigJson {
@@ -63,6 +66,7 @@ pub enum Params {
     FindNotes(FindNotesParams),
     NotesInfo(NotesInfoParams),
     GuiEditNote(GuiEditNoteParams),
+    None(NoParams),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,6 +77,16 @@ pub struct NoteAction {
 }
 
 impl NoteAction {
+    pub async fn deck_names(anki_client: &AnkiClient) -> Result<Vec<String>, AnkiError> {
+        let payload = NoteAction {
+            action: "deckNames".to_string(),
+            version: anki_client.version,
+            params: Params::None(NoParams {}),
+        };
+
+        post_deck_names_req(payload, &anki_client.endpoint, &anki_client.client).await
+    }
+
     pub async fn find_note_ids(
         anki_client: &AnkiClient,
         query: &str,
@@ -159,6 +173,24 @@ async fn post_find_note_ids_req(
     };
 
     let body: Result<NumVecRes, reqwest::Error> = res.json().await;
+
+    match body {
+        Ok(res) => res.into_result(),
+        Err(e) => Err(AnkiError::ParseError(e.to_string())),
+    }
+}
+
+async fn post_deck_names_req(
+    payload: NoteAction,
+    endpoint: &str,
+    client: &Client,
+) -> Result<Vec<String>, AnkiError> {
+    let res = match client.post(endpoint).json(&payload).send().await {
+        Ok(response) => response,
+        Err(e) => return Err(AnkiError::RequestError(e.to_string())),
+    };
+
+    let body: Result<crate::result::StringVecRes, reqwest::Error> = res.json().await;
 
     match body {
         Ok(res) => res.into_result(),

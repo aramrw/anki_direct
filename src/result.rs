@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// # Example Result
-/// ```
+/// ```json
 /// {
 ///    "result": [1483959289817, 1483959291695],
 ///    "error": null
@@ -16,6 +16,12 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NumVecRes {
     pub result: Option<Vec<u128>>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StringVecRes {
+    pub result: Option<Vec<String>>,
     pub error: Option<String>,
 }
 
@@ -69,6 +75,19 @@ impl NotesInfoRes {
 
 impl NumVecRes {
     pub fn into_result(self) -> Result<Vec<u128>, AnkiError> {
+        match self.error {
+            Some(e) => Err(AnkiError::RequestError(e)),
+            None => match self.result {
+                Some(vec) if vec.is_empty() => Err(AnkiError::NoDataFound),
+                Some(vec) => Ok(vec),
+                None => Err(AnkiError::NoDataFound),
+            },
+        }
+    }
+}
+
+impl StringVecRes {
+    pub fn into_result(self) -> Result<Vec<String>, AnkiError> {
         match self.error {
             Some(e) => Err(AnkiError::RequestError(e)),
             None => match self.result {
