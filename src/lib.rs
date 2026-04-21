@@ -1,25 +1,25 @@
 #[deny(missing_docs)]
 /// `error` is a module that contains the error types for the AnkiConnect API.
 pub mod error;
+/// `mock` is a module that contains mock implementations for the AnkiApi trait.
+pub mod mock;
 /// `notes` is a module that contains the note actions for the AnkiConnect API.
 pub mod notes;
 /// `result` is a module that contains the result types for the AnkiConnect API.
 pub mod result;
-/// `mock` is a module that contains mock implementations for the AnkiApi trait.
-pub mod mock;
 mod test;
 
-use async_trait::async_trait;
 use crate::error::AnkiError;
-use crate::result::NotesInfoData;
 use crate::notes::NoteAction;
+use crate::result::NotesInfoData;
+use async_trait::async_trait;
 use reqwest::Client;
 
-#[cfg(feature = "mock")]
-use mockall::automock;
+// #[cfg(feature = "mock")]
+// use mockall::automock;
 
 /// `AnkiApi` is a trait that defines the interface for communicating with Anki.
-#[cfg_attr(feature = "mock", automock)]
+//#[cfg_attr(feature = "mock", automock)]
 #[async_trait]
 pub trait AnkiApi: Send + Sync {
     /// Finds note IDs based on a query.

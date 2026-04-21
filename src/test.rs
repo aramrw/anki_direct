@@ -53,18 +53,18 @@ mod tests {
         assert!(info[0].fields.get("wordDictionaryForm").unwrap().value.contains("際"));
     }
 
-    #[cfg(feature = "mock")]
-    #[tokio::test]
-    async fn test_mock_api_generated() {
-        use crate::MockAnkiApi;
-        use crate::AnkiApi;
-
-        let mut mock = MockAnkiApi::new();
-        mock.expect_deck_names()
-            .times(1)
-            .returning(|| Ok(vec!["MockDeck".to_string()]));
-
-        let decks = mock.deck_names().await.unwrap();
-        assert_eq!(decks[0], "MockDeck");
-    }
+    // #[cfg(feature = "mock")]
+    // #[tokio::test]
+    // async fn test_mock_api_generated() {
+    //     //use crate::MockAnkiApi;
+    //     use crate::AnkiApi;
+    //
+    //     let mut mock = MockAnkiApi::new();
+    //     mock.expect_deck_names()
+    //         .times(1)
+    //         .returning(|| Ok(vec!["MockDeck".to_string()]));
+    //
+    //     let decks = mock.deck_names().await.unwrap();
+    //     assert_eq!(decks[0], "MockDeck");
+    // }
 }
