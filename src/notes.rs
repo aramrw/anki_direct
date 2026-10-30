@@ -465,13 +465,13 @@ impl NotesProxy {
     ///
     /// ```no_run
     /// use anki_direct::AnkiClient;
-    /// use anki_direct::notes::{NoteBuilder, MediaBuilder};
+    /// use anki_direct::notes::NoteBuilder;
     /// use anki_direct::error::AnkiResult;
     ///
-    /// fn main() -> AnkiResult<()> {nkiResult<()> {
+    /// fn main() -> AnkiResult<()> {
     ///     let client = AnkiClient::default_latest()?;
     ///
-    ///     let note = NoteBuilder::create_empty()
+    ///     let note = NoteBuilder::default()
     ///         .model_name("Basic".into())
     ///         .deck_name("Default".into())
     ///         .field("Front", "Hello")
@@ -559,7 +559,7 @@ impl NotesProxy {
     /// fn main() -> AnkiResult<()> {
     ///     let client = AnkiClient::default_latest()?;
     ///     // Replace with actual note IDs
-    ///     let note_ids = vec![1678823456789, 1678823456790];
+    ///     let note_ids = vec![1678823456789_isize, 1678823456790_isize];
     ///     let notes_info = client.notes().get_notes_infos(&note_ids)?;
     ///     for note in notes_info {
     ///         println!("Note ID: {}, Model: {}", note.noteId, note.modelName);
@@ -572,7 +572,7 @@ impl NotesProxy {
             notes: Number::from_slice_to_vec(ids),
         }));
         let payload = GenericRequestBuilder::default()
-            .action("findNotes".into())
+            .action("notesInfo".into())
             .version(self.version)
             .params(params)
             .build()
@@ -604,7 +604,7 @@ impl NotesProxy {
     ///
     /// fn main() -> AnkiResult<()> {
     ///     let client = AnkiClient::default_latest()?;
-    ///     let note_id = 1678823456789; // Replace with an actual note ID
+    ///     let note_id = 1678823456789_isize; // Replace with an actual note ID
     ///     client.notes().gui_edit(note_id)?;
     ///     println!("Opened GUI editor for note ID: {}", note_id);
     ///     Ok(())
@@ -644,7 +644,7 @@ impl NotesProxy {
     ///
     /// fn main() -> AnkiResult<()> {
     ///     let client = AnkiClient::default_latest()?;
-    ///     let note_ids_to_delete = vec![1678823456789, 1678823456790]; // Replace with actual note IDs
+    ///     let note_ids_to_delete = vec![1678823456789_isize, 1678823456790_isize]; // Replace with actual note IDs
     ///     client.notes().delete_notes_by_ids(&note_ids_to_delete)?;
     ///     println!("Deleted notes with IDs: {:?}", note_ids_to_delete);
     ///     Ok(())

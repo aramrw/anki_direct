@@ -19,7 +19,7 @@ impl StrIndex {
 
 /// Returns the index of the character after the first camel-case component of `s`.
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{_camel_case_until, StrIndex};
 /// assert_eq!(_camel_case_until("AbcDef"), StrIndex::new(6, 6));
 /// assert_eq!(_camel_case_until("ABCD"), StrIndex::new(0, 0));
@@ -63,7 +63,7 @@ pub fn _camel_case_until(s: &str) -> StrIndex {
 
 /// Returns index of the first camel-case component of `s`.
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{camel_case_start, StrIndex};
 /// assert_eq!(camel_case_start("AbcDef"), StrIndex::new(0, 0));
 /// assert_eq!(camel_case_start("abcDef"), StrIndex::new(3, 3));
@@ -78,7 +78,7 @@ pub fn camel_case_start(s: &str) -> StrIndex {
 
 /// Returns `StrIndex` of the last camel-case component of `s[idx..]`.
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{camel_case_start_from_idx, StrIndex};
 /// assert_eq!(camel_case_start_from_idx("AbcDef", 0), StrIndex::new(0, 0));
 /// assert_eq!(camel_case_start_from_idx("AbcDef", 1), StrIndex::new(3, 3));
@@ -127,7 +127,7 @@ pub fn camel_case_start_from_idx(s: &str, start_idx: usize) -> StrIndex {
 
 /// Get the indexes of camel case components of a string `s`
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{camel_case_indices, StrIndex};
 /// assert_eq!(
 ///     camel_case_indices("AbcDef"),
@@ -154,7 +154,7 @@ pub fn camel_case_indices(s: &str) -> Vec<StrIndex> {
 
 /// Split camel case string into a vector of its components
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{camel_case_split, StrIndex};
 /// assert_eq!(camel_case_split("AbcDef"), vec!["Abc", "Def"]);
 /// ```
@@ -189,7 +189,7 @@ impl StrCount {
 
 /// Returns the number of chars that match from the start
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{count_match_start, StrCount};
 /// assert_eq!(count_match_start("hello_mouse", "hello_penguin"), StrCount::new(6, 6));
 /// assert_eq!(count_match_start("hello_clippy", "bye_bugs"), StrCount::new(0, 0));
@@ -218,7 +218,7 @@ pub fn _count_match_start(str1: &str, str2: &str) -> StrCount {
 
 /// Returns the number of chars and bytes that match from the end
 ///
-/// ```no_run
+/// ```ignore
 /// # use clippy_utils::str_utils::{count_match_end, StrCount};
 /// assert_eq!(count_match_end("hello_cat", "bye_cat"), StrCount::new(4, 4));
 /// assert_eq!(count_match_end("if_item_thing", "enum_value"), StrCount::new(0, 0));
@@ -248,7 +248,7 @@ pub fn _count_match_end(str1: &str, str2: &str) -> StrCount {
 }
 
 /// Returns a `snake_case` version of the input
-/// ```no_run
+/// ```ignore
 /// use clippy_utils::str_utils::to_snake_case;
 /// assert_eq!(to_snake_case("AbcDef"), "abc_def");
 /// assert_eq!(to_snake_case("ABCD"), "a_b_c_d");
@@ -271,7 +271,7 @@ pub fn _to_snake_case(name: &str) -> String {
     s
 }
 /// Returns a `CamelCase` version of the input
-/// ```no_run
+/// ```ignore
 /// use clippy_utils::str_utils::to_camel_case;
 /// assert_eq!(to_camel_case("abc_def"), "AbcDef");
 /// assert_eq!(to_camel_case("a_b_c_d"), "ABCD");

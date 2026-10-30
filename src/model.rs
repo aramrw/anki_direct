@@ -243,27 +243,22 @@ impl ModelsProxy {
         self.post_generic_request::<ModelsResult>(payload)
     }
 
-    /// Get all models found in current anki session.
-    /// Returns: `Map<(name, details)>`
+    /// Fetches all models found in the current Anki session with their field lists (excluding templates and CSS).
+    /// Returns: `IndexMap<String, LessModelDetails>`
     ///
     /// # Example
     ///
-    /// This function can be used to update a cache:
     /// ```no_run
-    /// #[derive(Default)]
-    /// struct ModelCache(IndexMap<String, LessModelDetails);
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::error::AnkiResult;
     ///
-    /// static CACHE: LazyLock<RwLock<ModelCache>> = LazyLock::new(|| {
-    ///     ModelCache::default().into()
-    /// })
-    ///
-    /// impl ModelCache {
-    ///     async fn update() {
-    ///         let ac = AnkiClient::default_latest();
-    ///         let latest = ac.get_all_models_less().await.expect("u have no models");
-    ///         let mut cache = CACHE.write().unwrap();
-    ///         cache = latest;
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     let models = client.models().get_all_models_less()?;
+    ///     for (name, details) in models {
+    ///         println!("{}: {:?}", name, details.fields);
     ///     }
+    ///     Ok(())
     /// }
     /// ```
     pub fn get_all_models_less(
@@ -279,27 +274,22 @@ impl ModelsProxy {
         Ok(res)
     }
 
-    // Get all models found in current anki session.
-    /// Returns: `Map<(name, details)>`
+    /// Fetches all models found in the current Anki session including fields, card templates, and CSS styling.
+    /// Returns: `IndexMap<String, FullModelDetails>`
     ///
     /// # Example
     ///
-    /// This function can be used to update a cache:
     /// ```no_run
-    /// #[derive(Default)]
-    /// struct ModelCache(IndexMap<String, LessModelDetails);
+    /// use anki_direct::AnkiClient;
+    /// use anki_direct::error::AnkiResult;
     ///
-    /// static CACHE: LazyLock<RwLock<ModelCache>> = LazyLock::new(|| {
-    ///     ModelCache::default().into()
-    /// })
-    ///
-    /// impl ModelCache {
-    ///     async fn update() {
-    ///         let ac = AnkiClient::default_latest();
-    ///         let latest = ac.get_all_models_full().await.expect("u have no models");
-    ///         let mut cache = CACHE.write().unwrap();
-    ///         cache = latest;
+    /// fn main() -> AnkiResult<()> {
+    ///     let client = AnkiClient::default_latest()?;
+    ///     let models = client.models().get_all_models_full()?;
+    ///     for (name, details) in models {
+    ///         println!("{} (cloze: {})", name, details.is_cloze());
     ///     }
+    ///     Ok(())
     /// }
     /// ```
     pub fn get_all_models_full(

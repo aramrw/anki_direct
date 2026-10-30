@@ -44,6 +44,10 @@ where
             cache: IndexMap::new(),
         }
     }
+
+    pub(crate) fn set_modules(&mut self, modules: Arc<AnkiModules>) {
+        self.modules = Some(modules);
+    }
 }
 
 /// This implementation is only available when the key `K` is a `String`.
@@ -57,7 +61,7 @@ impl DeckCache<String> {
     ///
     /// # Errors
     ///
-    /// Returns [`CacheError::Dehydrated`](super::CacheError::Dehydrated) if the cache does not have a live connection.
+    /// Returns [`CacheError::Dehydrated`] if the cache does not have a live connection.
     pub fn hydrate_names(&mut self) -> AnkiResult<&mut Self> {
         let Some(modules) = &self.modules else {
             return Err(AnkiError::Cache(CacheError::Dehydrated));

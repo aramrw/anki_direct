@@ -54,7 +54,7 @@ impl Display for CardState {
 }
 
 /// [Display::fmt] Helper for anki queries that can be guessed from the variant name:
-/// ```no_run
+/// ```text
 /// IsNew -> "is:new"
 /// ```
 fn fmt_default_search_query(

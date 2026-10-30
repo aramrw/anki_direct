@@ -78,36 +78,31 @@ pub enum CacheError {
 /// use anki_direct::AnkiClient;
 /// use anki_direct::error::AnkiResult;
 /// use std::fs::File;
-/// use std::sync::Arc;
 ///
 /// fn manage_cache() -> AnkiResult<()> {
 ///     let client = AnkiClient::default_latest()?;
-///     let cache_path = "my_anki_cache.bin";
+///     let cache_path = "my_anki_cache.json";
 ///
 ///     // Try to load the cache from a file
 ///     let mut cache = if let Ok(file) = File::open(cache_path) {
-///         println!("Loading cache from disk...");
-///         let mut deserialized_cache: anki_direct::cache::Cache = bincode::deserialize_from(file).unwrap();
+///         let mut deserialized_cache: anki_direct::cache::Cache =
+///             serde_json::from_reader(file).unwrap();
 ///
 ///         // Re-hydrate the cache with a new, live connection
-///         println!("Re-hydrating cache...");
 ///         deserialized_cache.hydrate(client.modules().clone());
 ///         deserialized_cache
 ///     } else {
 ///         // No cache file found, create a new one
-///         println!("No cache found. Creating a new one.");
 ///         client.cache().clone()
 ///     };
 ///
 ///     // Use the cache, and update it with the latest from Anki
-///     println!("Updating cache with latest data from Anki...");
 ///     cache.update_all()?;
 ///     println!("Models in cache: {}", cache.models().len());
 ///
 ///     // Serialize the updated cache to disk for next time
-///     println!("Saving cache to disk...");
-///     let file = File::create(cache_path)?;
-///     bincode::serialize_into(file, &cache).unwrap();
+///     let file = File::create(cache_path).unwrap();
+///     serde_json::to_writer(file, &cache).unwrap();
 ///
 ///     Ok(())
 /// }
@@ -143,7 +138,7 @@ impl Cache {
         &mut self.models
     }
 
-    /// Fetches the latest data for all managed caches from Anki.
+    /// Fetches the latest data for all managed caches (`models` and `decks`) from Anki.
     ///
     /// This operation requires the cache to be "hydrated" (i.e., have a live connection).
     ///
@@ -153,6 +148,7 @@ impl Cache {
     /// been re-hydrated.
     pub fn update_all(&mut self) -> AnkiResult<()> {
         self.models_mut().hydrate()?;
+        self.decks_mut().hydrate_names()?;
         Ok(())
     }
 
@@ -160,12 +156,14 @@ impl Cache {
     ///
     /// This method is essential for making a deserialized cache fully operational again.
     /// It takes the `AnkiModules` from a new `AnkiClient` instance and attaches them
-    /// to the cache, enabling it to perform actions that require a connection.
+    /// to the cache and its sub-caches, enabling it to perform actions that require a connection.
     ///
     /// # Parameters
     ///
     /// - `modules`: An `Arc<AnkiModules>` from a live `AnkiClient`.
     pub fn hydrate(&mut self, modules: Arc<AnkiModules>) -> &mut Self {
+        self.models.set_modules(modules.clone());
+        self.decks.set_modules(modules.clone());
         self.modules = Some(modules);
         self
     }

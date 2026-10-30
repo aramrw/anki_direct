@@ -50,9 +50,12 @@ impl Backend {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// let payload = NoteAction {..};
-    /// let res: Result<Vec<isize>> = self.post_generic_request::<Vec<isize>>(payload).await
+    /// ```ignore
+    /// let payload = GenericRequestBuilder::default()
+    ///     .action("deckNames".into())
+    ///     .version(6)
+    ///     .build()?;
+    /// let res: Result<Vec<String>, AnkiError> = self.post_generic_request(payload);
     /// ```
     pub fn post_generic_request<T: DeserializeOwned + Debug>(
         &self,

@@ -20,7 +20,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! anki_direct = "0.0.1"
+//! anki_direct = "0.1.1"
 //! ```
 //!
 //! # Examples
@@ -49,13 +49,13 @@
 //! fn main() -> AnkiResult<()> {
 //!     let client = AnkiClient::default_latest()?;
 //!
-//!     let audio = MediaBuilder::create_empty()
+//!     let audio = MediaBuilder::default()
 //!         .filename("example.mp3".into())
 //!         .fields(vec!["myAudio".into()])
 //!         .url("http://example.com/audio.mp3")
 //!         .build()?;
 //!
-//!     let note = NoteBuilder::create_empty()
+//!     let note = NoteBuilder::default()
 //!         .model_name("Basic".into())
 //!         .deck_name("Default".into())
 //!         .field("Front", "Hello")
@@ -82,6 +82,25 @@ pub mod notes;
 pub mod result;
 mod str_utils;
 mod test_utils;
+
+/// Convenient re-exports of the most commonly used types and builders in `anki_direct`.
+pub mod prelude {
+    pub use crate::anki::{AnkiQuery, CardState};
+    #[cfg(feature = "cache")]
+    pub use crate::cache::{Cache, CacheError};
+    pub use crate::decks::DeckConfig;
+    pub use crate::error::{AnkiError, AnkiResult};
+    pub use crate::model::{
+        CardTemplate, ClozeNoteType, FullModelDetails, LessModelDetails, ModelDetails,
+        ModelStyling, ModelTemplates, NoteType, RegNoteType, TemplateInfo,
+    };
+    pub use crate::notes::{
+        DuplicateScope, DuplicateScopeOptions, Media, MediaBuilder, MediaPath, MediaSource, Note,
+        NoteBuilder, NoteOptions,
+    };
+    pub use crate::result::NotesInfoData;
+    pub use crate::{AnkiClient, Backend, Number};
+}
 
 use std::{ops::Deref, sync::Arc};
 
@@ -116,6 +135,7 @@ pub use reqwest::Client as ReqwestClient;
 #[derive(Clone, Debug, Getters, MutGetters)]
 pub struct AnkiClient {
     backend: Arc<Backend>,
+    #[getset(get = "pub")]
     modules: Arc<AnkiModules>,
     #[cfg(feature = "cache")]
     #[getset(get = "pub", get_mut = "pub")]
@@ -132,6 +152,7 @@ impl AnkiClient {
     /// # Example
     ///
     /// ```no_run
+    /// use anki_direct::AnkiClient;
     /// // AnkiConnect's default is "8765"
     /// let client = AnkiClient::new_port("8765");
     /// ```
@@ -152,6 +173,7 @@ impl AnkiClient {
     /// # Example
     ///
     /// ```no_run
+    /// use anki_direct::AnkiClient;
     /// let client = AnkiClient::default_latest();
     /// ```
     pub fn default_latest() -> AnkiResult<Self> {
@@ -178,6 +200,7 @@ impl AnkiClient {
     /// # Example
     ///
     /// ```
+    /// use anki_direct::AnkiClient;
     /// // Create an AnkiClient for AnkiConnect on port 8765 with API version 6
     /// let client = AnkiClient::new_port_version("8765", 6);
     /// ```
@@ -543,6 +566,11 @@ impl Deref for Number {
     type Target = isize;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+impl std::fmt::Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
